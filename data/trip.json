@@ -517,18 +517,6 @@
           "priority": ""
         },
         {
-          "id": "d4-02",
-          "time": "13:00",
-          "what": "中崎町 古著街・咖啡店",
-          "place": "中崎町",
-          "address": "",
-          "phone": "",
-          "ref": "",
-          "note": "",
-          "status": "",
-          "priority": ""
-        },
-        {
           "id": "d4-03",
           "time": "14:30",
           "what": "じぶんまくら 訂製枕頭",
@@ -537,6 +525,18 @@
           "phone": "06-6450-8410",
           "ref": "",
           "note": "需電話預約",
+          "status": "",
+          "priority": ""
+        },
+        {
+          "id": "d4-02",
+          "time": "13:00",
+          "what": "中崎町 古著街・咖啡店",
+          "place": "中崎町",
+          "address": "",
+          "phone": "",
+          "ref": "",
+          "note": "",
           "status": "",
           "priority": ""
         },
