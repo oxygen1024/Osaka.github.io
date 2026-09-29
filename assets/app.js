@@ -55,6 +55,9 @@
     var t = document.getElementById('toast');
     t.textContent = msg;
     t.hidden = false;
+    t.classList.remove('show');
+    void t.offsetWidth;
+    t.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { t.hidden = true; }, ms || 2600);
   }
@@ -219,7 +222,7 @@
       local: '📱 只存本機'
     }[s] || '';
     b.textContent = label;
-    b.className = 'sync ' + s;
+    b.className = 'sync ' + s + (s === 'ok' || s === 'local' ? ' pulse' : '');
   }
 
   // ================= 畫面 =================
@@ -335,8 +338,9 @@
 
   function renderItem(item, di, ii) {
     var place = item.place || item.address;
-    return el('li', { class: [item.status, item.priority ? 'prio-' + item.priority : ''].join(' ') }, [
+    return el('li', { class: [item.status, item.priority ? 'prio-' + item.priority : ''].join(' '), dataset: { id: item.id }, style: '--i:' + Math.min(ii, 12) }, [
       el('div', { class: 'row' }, [
+        el('button', { type: 'button', class: 'icon handle', 'aria-label': '拖拉排序', title: '按住拖拉排序', text: '⠿' }),
         item.time ? el('time', { text: item.time }) : null,
         prioChip(item.priority),
         el('span', { class: 'spacer' }),
@@ -363,7 +367,7 @@
         el('button', { type: 'button', class: 'icon edit', 'aria-label': '編輯當日', text: '✏️', onclick: function () { openDayEdit(i); } })
       ]),
       d.alert ? el('p', { class: 'alert', text: '⚠️ ' + d.alert }) : null,
-      el('ol', { class: 'timeline' }, d.items.map(function (it, ii) { return renderItem(it, i, ii); })),
+      el('ol', { class: 'timeline', dataset: { day: i } }, d.items.map(function (it, ii) { return renderItem(it, i, ii); })),
       el('button', { type: 'button', class: 'btn add', text: '＋ 新增行程', onclick: function () { openEdit(i, -1); } }),
       el('h3', { text: '📷 相片 / 文件' }),
       gallery('day' + (i + 1))
@@ -627,8 +631,12 @@
   }
 
   function closeSheets() {
-    sheet.hidden = true;
-    document.getElementById('day-sheet').hidden = true;
+    document.querySelectorAll('.sheet').forEach(function (s) {
+      if (s.hidden) return;
+      if (REDUCED) { s.hidden = true; return; }
+      s.classList.add('closing');
+      setTimeout(function () { s.hidden = true; s.classList.remove('closing'); }, 200);
+    });
     body.classList.remove('noscroll');
     editing = null;
   }
@@ -729,7 +737,15 @@
       if (on) { found = true; b.scrollIntoView({ block: 'nearest', inline: 'center' }); }
     });
     if (!found) return false;
-    document.querySelectorAll('.panel').forEach(function (p) { p.classList.toggle('active', p.id === id); });
+    document.querySelectorAll('.panel').forEach(function (p) {
+      var on = p.id === id;
+      p.classList.toggle('active', on);
+      if (on && !silent) {
+        p.classList.remove('enter');
+        void p.offsetWidth;
+        p.classList.add('enter');
+      }
+    });
     state.tab = id;
     lsSet(LS.tab, id);
     if (!silent) window.scrollTo(0, 0);
@@ -773,11 +789,160 @@
     if (b.checked) state.checks[b.dataset.key] = 1; else delete state.checks[b.dataset.key];
     lsSet(LS.checks, JSON.stringify(state.checks));
     refreshChecks();
+    tickFx(b);
   });
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') { closeViewer(); closeSheets(); }
   });
+
+  // ================= 動畫效果 =================
+  var REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+
+  // 撳掣水波紋
+  document.addEventListener('pointerdown', function (e) {
+    var b = e.target.closest('.btn, .icon, #tabs button, .sync, .thumb');
+    if (!b || REDUCED || b.classList.contains('handle')) return;
+    var r = b.getBoundingClientRect();
+    var size = Math.max(r.width, r.height) * 2;
+    var dot = el('span', { class: 'ripple' });
+    dot.style.width = dot.style.height = size + 'px';
+    dot.style.left = (e.clientX - r.left - size / 2) + 'px';
+    dot.style.top = (e.clientY - r.top - size / 2) + 'px';
+    b.appendChild(dot);
+    setTimeout(function () { dot.remove(); }, 600);
+  });
+
+  // 剔選：彈一彈 + 彩紙
+  var CONFETTI = ['#1e8e3e', '#34a853', '#fbbc04', '#c8102e', '#4285f4', '#ff7eb6'];
+  function tickFx(box) {
+    var label = box.closest('.tag');
+    var card = box.closest('li, .card');
+    if (REDUCED) return;
+    if (label) { label.classList.remove('pop', 'unpop'); void label.offsetWidth; label.classList.add(box.checked ? 'pop' : 'unpop'); }
+    if (!box.checked) return;
+    buzz(12);
+    if (card) { card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash'); }
+    var r = box.getBoundingClientRect();
+    var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    var colors = label && label.classList.contains('todo') ? ['#d9730d', '#fbbc04', '#ffa24d', '#c8102e'] : CONFETTI;
+    for (var i = 0; i < 14; i++) {
+      var p = el('span', { class: 'confetti' });
+      p.style.background = colors[i % colors.length];
+      p.style.left = cx + 'px';
+      p.style.top = cy + 'px';
+      document.body.appendChild(p);
+      var ang = (Math.PI * 2 * i) / 14 + Math.random() * 0.4;
+      var dist = 28 + Math.random() * 30;
+      p.animate([
+        { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+        { transform: 'translate(' + (Math.cos(ang) * dist - 3) + 'px,' + (Math.sin(ang) * dist + 14) + 'px) rotate(' + (Math.random() * 360) + 'deg) scale(.6)', opacity: 0 }
+      ], { duration: 650 + Math.random() * 200, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = (function (n) { return function () { n.remove(); }; })(p);
+    }
+  }
+
+  // ================= 拖拉排序 =================
+  var drag = null;
+  document.getElementById('main').addEventListener('pointerdown', function (e) {
+    var h = e.target.closest('.handle');
+    if (!h || drag) return;
+    var li = h.closest('li');
+    var list = li.parentNode;
+    e.preventDefault();
+    var r = li.getBoundingClientRect();
+    var ph = el('li', { class: 'placeholder' });
+    ph.style.height = r.height + 'px';
+    list.insertBefore(ph, li);
+    li.classList.add('dragging');
+    li.style.width = r.width + 'px';
+    li.style.left = r.left + 'px';
+    li.style.top = r.top + 'px';
+    drag = { li: li, list: list, ph: ph, offset: e.clientY - r.top, y: e.clientY, before: order(list), handle: h, id: e.pointerId };
+    try { h.setPointerCapture(e.pointerId); } catch (err) {}
+    buzz(15);
+    requestAnimationFrame(autoScroll);
+  });
+
+  function order(list) {
+    return Array.prototype.map.call(list.querySelectorAll(':scope > li[data-id]'), function (n) { return n.dataset.id; }).join(',');
+  }
+
+  function siblings() {
+    return Array.prototype.filter.call(drag.list.children, function (n) { return n !== drag.li && n !== drag.ph; });
+  }
+
+  function placeAt(y) {
+    var sibs = siblings();
+    var target = null;
+    for (var i = 0; i < sibs.length; i++) {
+      var r = sibs[i].getBoundingClientRect();
+      if (y < r.top + r.height / 2) { target = sibs[i]; break; }
+    }
+    var cur = drag.ph.nextSibling === drag.li ? drag.li.nextSibling : drag.ph.nextSibling;
+    if (cur === target) return;
+    // FLIP：其他卡片順滑讓位
+    var first = sibs.map(function (n) { return n.getBoundingClientRect().top; });
+    if (target) drag.list.insertBefore(drag.ph, target); else drag.list.appendChild(drag.ph);
+    if (REDUCED) return;
+    sibs.forEach(function (n, k) {
+      var dy = first[k] - n.getBoundingClientRect().top;
+      if (!dy) return;
+      n.animate([{ transform: 'translateY(' + dy + 'px)' }, { transform: 'none' }], { duration: 180, easing: 'ease-out' });
+    });
+  }
+
+  function moveTo(y) {
+    drag.y = y;
+    drag.li.style.top = (y - drag.offset) + 'px';
+    placeAt(y);
+  }
+
+  function autoScroll() {
+    if (!drag) return;
+    var edge = 80, v = 0;
+    if (drag.y < edge) v = -Math.ceil((edge - drag.y) / 6);
+    else if (drag.y > innerHeight - edge) v = Math.ceil((drag.y - innerHeight + edge) / 6);
+    if (v) { window.scrollBy(0, v); placeAt(drag.y); }
+    requestAnimationFrame(autoScroll);
+  }
+
+  document.addEventListener('pointermove', function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    e.preventDefault();
+    moveTo(e.clientY);
+  }, { passive: false });
+
+  function endDrag(e) {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    var d = drag;
+    drag = null;
+    var pr = d.ph.getBoundingClientRect();
+    function finish() {
+      d.li.classList.remove('dragging', 'dropping');
+      d.li.style.width = d.li.style.left = d.li.style.top = '';
+      d.list.insertBefore(d.li, d.ph);
+      d.ph.remove();
+      if (order(d.list) === d.before) return;
+      var di = +d.list.dataset.day;
+      var items = state.trip.days[di].items;
+      var byId = {};
+      items.forEach(function (it) { byId[it.id] = it; });
+      state.trip.days[di].items = order(d.list).split(',').map(function (id) { return byId[id]; });
+      render();
+      var moved = document.querySelector('#day' + (di + 1) + ' li[data-id="' + d.li.dataset.id + '"]');
+      if (moved && !REDUCED) moved.classList.add('flash');
+      saveTrip('拖拉調整 Day ' + (di + 1) + ' 行程次序');
+    }
+    if (REDUCED) { finish(); return; }
+    d.li.classList.add('dropping');
+    d.li.style.left = pr.left + 'px';
+    d.li.style.top = pr.top + 'px';
+    setTimeout(finish, 190);
+  }
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
 
   // ================= 啟動 =================
   function boot() {

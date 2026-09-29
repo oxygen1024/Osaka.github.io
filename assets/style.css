@@ -339,3 +339,90 @@ body.noscroll { overflow: hidden; }
 }
 .toast[hidden] { display: none; }
 .viewer .btn.danger { margin-top: 10px; background: rgba(255, 255, 255, .12); border-color: transparent; color: #ffb4b4; }
+
+/* ================= 動畫 ================= */
+.btn, .icon, .tabs button, .thumb { position: relative; overflow: hidden; }
+.sync { overflow: hidden; }
+.btn, .icon, .tabs button, .thumb, .tag, .sync {
+  transition: transform .12s ease, background-color .2s, box-shadow .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active, .icon:active, .tabs button:active, .thumb:active, .sync:active { transform: scale(.94); }
+.tabs button.active { box-shadow: 0 4px 12px rgba(200, 16, 46, .3); }
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .18;
+  transform: scale(0);
+  pointer-events: none;
+  animation: ripple .55s ease-out forwards;
+}
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }
+
+/* 分頁切換 */
+.panel.enter { animation: panel-in .28s ease-out; }
+.panel.enter .timeline > li,
+.panel.enter .card,
+.panel.enter .todolist > li { animation: card-in .35s ease-out backwards; animation-delay: calc(var(--i, 0) * 30ms + 40ms); }
+@keyframes panel-in { from { opacity: 0; transform: translateY(8px); } }
+@keyframes card-in { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+
+/* 剔選 */
+.tag input { transition: transform .15s; }
+.tag.pop { animation: tag-pop .45s cubic-bezier(.3, 1.6, .5, 1); }
+.tag.unpop { animation: tag-shake .3s ease; }
+@keyframes tag-pop { 0% { transform: scale(1); } 35% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes tag-shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+.confetti {
+  position: fixed;
+  z-index: 50;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  pointer-events: none;
+}
+li.flash, .card.flash { animation: flash .7s ease-out; }
+@keyframes flash { from { box-shadow: 0 0 0 3px var(--ok); } to { box-shadow: 0 0 0 0 transparent; } }
+.what, .todo-text { transition: opacity .3s, color .3s; }
+
+/* 拖拉 */
+.handle { cursor: grab; touch-action: none; color: var(--muted); font-size: 1.1rem; width: 28px; border-style: dashed; }
+.timeline li.dragging {
+  position: fixed;
+  z-index: 25;
+  margin: 0;
+  pointer-events: none;
+  transform: scale(1.03) rotate(-1deg);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, .25);
+  transition: transform .15s;
+}
+.timeline li.dropping { transform: none; box-shadow: none; transition: left .18s ease, top .18s ease, transform .18s, box-shadow .18s; }
+.timeline li.placeholder {
+  border: 2px dashed var(--accent);
+  background: transparent;
+  opacity: .5;
+}
+body:has(li.dragging) { user-select: none; -webkit-user-select: none; cursor: grabbing; }
+
+/* 表單 / 相片 / 提示 */
+.sheet:not([hidden]) { animation: fade-in .2s ease-out; }
+.sheet:not([hidden]) .sheet-body { animation: sheet-up .28s cubic-bezier(.2, .8, .3, 1); }
+.sheet.closing { animation: fade-out .2s ease-in forwards; }
+.sheet.closing .sheet-body { animation: sheet-down .2s ease-in forwards; }
+@keyframes sheet-up { from { transform: translateY(100%); } }
+@keyframes sheet-down { to { transform: translateY(100%); } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+.viewer:not([hidden]) { animation: fade-in .2s ease-out; }
+.viewer:not([hidden]) img { animation: zoom-in .25s cubic-bezier(.2, .8, .3, 1); }
+@keyframes zoom-in { from { transform: scale(.85); opacity: 0; } }
+.toast.show { animation: toast-in .3s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes toast-in { from { transform: translate(-50%, 20px); opacity: 0; } }
+.sync.pulse { animation: pulse .6s ease-out; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .7); } 100% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); } }
+.badge:not([hidden]) { animation: tag-pop .4s cubic-bezier(.3, 1.6, .5, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
