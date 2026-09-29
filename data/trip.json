@@ -517,18 +517,6 @@
           "priority": ""
         },
         {
-          "id": "d4-03",
-          "time": "14:30",
-          "what": "じぶんまくら 訂製枕頭",
-          "place": "じぶんまくら グランフロント大阪",
-          "address": "Grand Front Osaka 南館 5F",
-          "phone": "06-6450-8410",
-          "ref": "",
-          "note": "需電話預約",
-          "status": "",
-          "priority": ""
-        },
-        {
           "id": "d4-02",
           "time": "13:00",
           "what": "中崎町 古著街・咖啡店",
@@ -537,6 +525,18 @@
           "phone": "",
           "ref": "",
           "note": "",
+          "status": "",
+          "priority": ""
+        },
+        {
+          "id": "d4-03",
+          "time": "14:30",
+          "what": "じぶんまくら 訂製枕頭",
+          "place": "じぶんまくら グランフロント大阪",
+          "address": "Grand Front Osaka 南館 5F",
+          "phone": "06-6450-8410",
+          "ref": "",
+          "note": "需電話預約",
           "status": "",
           "priority": ""
         },
