@@ -106,13 +106,13 @@
           "id": "d1-02",
           "time": "08:30",
           "what": "特急 HARUKA 前往京都",
-          "place": "関西空港駅",
+          "status": "confirmed",
+          "priority": "",
           "address": "",
+          "place": "関西空港駅",
           "phone": "",
           "ref": "",
-          "note": "已購買",
-          "status": "confirmed",
-          "priority": ""
+          "note": "https://track.hopegoo.com/CL0/https:%2F%2Ft.trip.com%2F%3Fgmnipx2%2F2Q**/1/010e01a0cd480da1-44cf5a69-eab9-4c70-ae52-c074eb29357c-000000/NwQO6kVK7OJgK43jwnM9ZAk31IKY9-LvGAuz4ZmE8cA=258"
         },
         {
           "id": "d1-03",
