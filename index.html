@@ -3,6 +3,8 @@ layout: null
 ---
 {%- assign trip = site.data.trip -%}
 {%- assign ver = site.time | date: "%s" -%}
+{%- assign wd = "日,一,二,三,四,五,六" | split: "," -%}
+{%- assign start = trip.start_date | date: "%s" | plus: 0 -%}
 <!doctype html>
 <html lang="zh-Hant-HK">
 <head>
@@ -11,7 +13,7 @@ layout: null
   <title>{{ trip.title }}</title>
   <meta name="theme-color" content="#c8102e">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="大阪之旅">
+  <meta name="apple-mobile-web-app-title" content="關西之旅">
   <meta name="robots" content="noindex, nofollow">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
@@ -21,57 +23,131 @@ layout: null
 <body>
   <header class="top">
     <h1>{{ trip.title }}</h1>
-    <p>{{ trip.subtitle }}{% if trip.start_date %} · {{ trip.start_date | date: "%Y/%m/%d" }} 出發{% endif %}</p>
+    {%- assign w1 = trip.start_date | date: "%w" | plus: 0 %}
+    {%- assign w2 = trip.end_date | date: "%w" | plus: 0 %}
+    <p>{{ trip.start_date | date: "%Y/%-m/%-d" }}（{{ wd[w1] }}）– {{ trip.end_date | date: "%-m/%-d" }}（{{ wd[w2] }}）· {{ trip.travellers }} 人</p>
   </header>
 
   <nav class="tabs" id="tabs">
-    <button type="button" data-tab="bookings">📎<small>預訂</small></button>
+    <button type="button" data-tab="overview">🧳<small>總覽</small></button>
     {%- for day in trip.days %}
-    {%- assign n = forloop.index0 | times: 86400 %}
-    <button type="button" data-tab="day{{ forloop.index }}"{% if trip.start_date %} data-date="{{ trip.start_date | date: '%s' | plus: n | date: '%Y-%m-%d' }}"{% endif %}>
-      Day {{ forloop.index }}
-      {%- if trip.start_date %}<small>{{ trip.start_date | date: '%s' | plus: n | date: '%-m/%-d' }}</small>{% endif %}
+    {%- assign ts = forloop.index0 | times: 86400 | plus: start %}
+    <button type="button" data-tab="day{{ forloop.index }}" data-date="{{ ts | date: '%Y-%m-%d' }}">
+      Day {{ forloop.index }}<small>{{ ts | date: '%-m/%-d' }}</small>
     </button>
     {%- endfor %}
+    <button type="button" data-tab="todo">✅<small>待辦 <b class="badge" id="todo-count"></b></small></button>
   </nav>
 
   <main>
-    <section class="panel" id="bookings">
-      <h2>預訂資料</h2>
+    <!-- ========== 總覽 ========== -->
+    <section class="panel" id="overview">
+      <h2>行程總覽</h2>
+      <ol class="daylist">
+        {%- for day in trip.days %}
+        {%- assign ts = forloop.index0 | times: 86400 | plus: start %}
+        {%- assign w = ts | date: '%w' | plus: 0 %}
+        <li><a href="#day{{ forloop.index }}"><b>Day {{ forloop.index }}</b><span>{{ ts | date: '%-m/%-d' }}（{{ wd[w] }}）</span>{{ day.title }}</a></li>
+        {%- endfor %}
+      </ol>
+
+      <h3>✈️ 機票</h3>
+      {%- for f in trip.flights %}
+      <div class="card">
+        <div class="card-head"><b>{{ f.label }}・{{ f.code }}</b>{% assign k = "flight-" | append: f.code %}{% include tag.html status=f.status key=k %}</div>
+        <div class="muted">{{ f.date }}</div>
+        <div class="flight">
+          <div><strong>{{ f.dep }}</strong><span>{{ f.from }}</span></div>
+          <div class="arrow">→</div>
+          <div><strong>{{ f.arr }}</strong><span>{{ f.to }}</span></div>
+        </div>
+      </div>
+      {%- endfor %}
+
+      <h3>🏨 住宿</h3>
+      {%- for h in trip.hotels %}
+      <div class="card">
+        <div class="card-head"><b>{{ h.name }}</b>{% assign k = "hotel-" | append: forloop.index %}{% include tag.html status=h.status key=k %}</div>
+        <div class="muted">{{ h.checkin }} 入住 → {{ h.checkout }} 退房（{{ h.nights }} 晚）</div>
+        <div class="field">🏠 {{ h.address }}</div>
+        <div class="actions">
+          {% include maplink.html q=h.name %}
+          <a class="btn" href="tel:{{ h.phone | remove: '-' }}">📞 {{ h.phone }}</a>
+        </div>
+      </div>
+      {%- endfor %}
+
+      <h3>🚆 交通票務</h3>
+      {%- for t in trip.transport %}
+      <div class="card">
+        <div class="card-head"><b>{{ t.what }}</b>{% assign k = "transport-" | append: forloop.index %}{% include tag.html status=t.status key=k %}</div>
+        {%- if t.ref %}<div class="field">🔖 預約編號：<code class="ref">{{ t.ref }}</code></div>{% endif %}
+        {%- if t.note %}<div class="muted">{{ t.note }}</div>{% endif %}
+      </div>
+      {%- endfor %}
+
+      <h3>📎 預訂截圖</h3>
       {%- for cat in trip.bookings %}
-      <h3>{{ cat.name }}</h3>
+      <h4>{{ cat.name }}</h4>
       {%- assign prefix = "/photos/" | append: cat.folder | append: "/" %}
       {% include gallery.html prefix=prefix %}
       {%- endfor %}
     </section>
 
+    <!-- ========== 每日行程 ========== -->
     {%- for day in trip.days %}
-    {%- assign n = forloop.index0 | times: 86400 %}
-    <section class="panel" id="day{{ forloop.index }}">
+    {%- assign dn = forloop.index %}
+    {%- assign ts = forloop.index0 | times: 86400 | plus: start %}
+    {%- assign w = ts | date: '%w' | plus: 0 %}
+    <section class="panel" id="day{{ dn }}">
       <h2>
-        <span class="daynum">Day {{ forloop.index }}</span>
-        {%- if trip.start_date %}<span class="date">{{ trip.start_date | date: '%s' | plus: n | date: '%-m月%-d日 (%a)' }}</span>{% endif %}
+        <span>Day {{ dn }}</span>
+        <span class="date">{{ ts | date: '%Y/%-m/%-d' }}（{{ wd[w] }}）</span>
       </h2>
       <p class="daytitle">{{ day.title }}</p>
-      {%- if day.items %}
+      {%- if day.alert %}<p class="alert">⚠️ {{ day.alert }}</p>{% endif %}
       <ol class="timeline">
         {%- for item in day.items %}
-        <li>
-          {%- if item.time %}<time>{{ item.time }}</time>{% endif %}
+        {%- assign key = item.key | default: "" %}
+        {%- if key == "" %}{% assign key = "d" | append: dn | append: "-" | append: forloop.index %}{% endif %}
+        <li class="{{ item.status }}">
+          <div class="row">
+            {%- if item.time %}<time>{{ item.time }}</time>{% endif %}
+            {% include tag.html status=item.status key=key %}
+          </div>
           <div class="what">{{ item.what }}</div>
-          {%- if item.place %}
-          <a class="map" href="https://www.google.com/maps/search/?api=1&amp;query={{ item.place | cgi_escape }}" target="_blank" rel="noopener">📍 {{ item.place }}</a>
-          {%- endif %}
+          {%- if item.address %}<div class="field">🏠 {{ item.address }}</div>{% endif %}
+          {%- if item.ref %}<div class="field">🔖 預約編號：<code class="ref">{{ item.ref }}</code></div>{% endif %}
           {%- if item.note %}<div class="note">{{ item.note }}</div>{% endif %}
+          {%- if item.place or item.phone %}
+          <div class="actions">
+            {%- if item.place %}{% include maplink.html q=item.place %}{% endif %}
+            {%- if item.phone %}<a class="btn" href="tel:{{ item.phone | remove: '-' }}">📞 {{ item.phone }}</a>{% endif %}
+          </div>
+          {%- endif %}
         </li>
         {%- endfor %}
       </ol>
-      {%- endif %}
       <h3>📷 相片 / 文件</h3>
-      {%- assign prefix = "/photos/day" | append: forloop.index | append: "/" %}
+      {%- assign prefix = "/photos/day" | append: dn | append: "/" %}
       {% include gallery.html prefix=prefix %}
     </section>
     {%- endfor %}
+
+    <!-- ========== 待辦 ========== -->
+    <section class="panel" id="todo">
+      <h2>待辦事項</h2>
+      <p class="muted">剔咗之後，對應嗰日行程都會同步剔埋（只儲存喺呢部手機）。</p>
+      <ul class="todolist">
+        {%- for t in trip.todos %}
+        <li>
+          <label class="tag todo"><input type="checkbox" data-key="{{ t.key }}" class="todo-box"><span>待處理</span></label>
+          <span class="todo-text">{{ t.text }}</span>
+          <a class="btn" href="#day{{ t.day }}">Day {{ t.day }} →</a>
+        </li>
+        {%- endfor %}
+      </ul>
+    </section>
   </main>
 
   <footer>最後更新：{{ site.time | date: "%Y-%m-%d %H:%M" }} (UTC)</footer>

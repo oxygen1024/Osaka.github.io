@@ -1,7 +1,17 @@
 (function () {
   var tabs = document.querySelectorAll('#tabs button');
-  var KEY = 'osaka-tab';
+  var TAB_KEY = 'kansai-tab';
+  var CHECK_KEY = 'kansai-checks';
 
+  function store(key, val) {
+    try {
+      if (val === undefined) return localStorage.getItem(key);
+      localStorage.setItem(key, val);
+    } catch (e) {}
+    return null;
+  }
+
+  // ---------- 分頁 ----------
   function show(id) {
     var found = false;
     tabs.forEach(function (b) {
@@ -13,12 +23,19 @@
     document.querySelectorAll('.panel').forEach(function (p) {
       p.classList.toggle('active', p.id === id);
     });
-    try { localStorage.setItem(KEY, id); } catch (e) {}
+    store(TAB_KEY, id);
     return true;
   }
 
   tabs.forEach(function (b) {
-    b.addEventListener('click', function () { show(b.dataset.tab); window.scrollTo(0, 0); });
+    b.addEventListener('click', function () {
+      show(b.dataset.tab);
+      history.replaceState(null, '', '#' + b.dataset.tab);
+      window.scrollTo(0, 0);
+    });
+  });
+  window.addEventListener('hashchange', function () {
+    if (show(location.hash.slice(1))) window.scrollTo(0, 0);
   });
 
   // 今日日期（日本時間）
@@ -28,11 +45,39 @@
     if (b.dataset.date === today) { b.classList.add('today'); todayTab = b.dataset.tab; }
   });
 
-  var saved = null;
-  try { saved = localStorage.getItem(KEY); } catch (e) {}
-  if (!(todayTab && show(todayTab)) && !(saved && show(saved))) show(tabs[0].dataset.tab);
+  var hash = location.hash.slice(1);
+  if (!(hash && show(hash)) && !(todayTab && show(todayTab)) && !show(store(TAB_KEY) || '')) {
+    show(tabs[0].dataset.tab);
+  }
 
-  // 相片放大
+  // ---------- 剔選框（儲存喺本機） ----------
+  var checks = {};
+  try { checks = JSON.parse(store(CHECK_KEY) || '{}') || {}; } catch (e) { checks = {}; }
+  var boxes = document.querySelectorAll('input[type=checkbox][data-key]');
+
+  function refresh() {
+    boxes.forEach(function (b) {
+      b.checked = !!checks[b.dataset.key];
+      var li = b.closest('li, .card');
+      if (li) li.classList.toggle('checked', b.checked);
+    });
+    var left = 0;
+    document.querySelectorAll('.todo-box').forEach(function (b) { if (!b.checked) left++; });
+    var badge = document.getElementById('todo-count');
+    badge.textContent = left || '';
+    badge.hidden = !left;
+  }
+
+  boxes.forEach(function (b) {
+    b.addEventListener('change', function () {
+      if (b.checked) checks[b.dataset.key] = 1; else delete checks[b.dataset.key];
+      store(CHECK_KEY, JSON.stringify(checks));
+      refresh();
+    });
+  });
+  refresh();
+
+  // ---------- 相片放大 ----------
   var viewer = document.getElementById('viewer');
   var vImg = viewer.querySelector('img');
   var vCap = viewer.querySelector('.caption');

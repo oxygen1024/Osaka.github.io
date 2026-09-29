@@ -1,41 +1,331 @@
 # ==============================================
 #  行程資料：改呢個檔就會更新網站
+#  時間、預約編號一定要用 "" 包住
 # ==============================================
-title: 大阪之旅 🇯🇵
-subtitle: 7 日行程
-# 第一日日期（格式 YYYY-MM-DD）。填咗之後，旅行期間打開網站會自動跳去「今日」嗰日
-start_date:
+title: 京都・大阪 7日6夜自由行
+start_date: 2026-10-23
+end_date: 2026-10-29
+travellers: 1
 
-# ---------- 預訂資料分類（對應 photos/ 入面嘅資料夾） ----------
+# ---------- 機票 ----------
+flights:
+  - code: HX616
+    label: 去程
+    date: 10/23（五）
+    from: 香港國際機場
+    dep: "03:05"
+    to: 關西國際機場 T1
+    arr: "07:55"
+    status: confirmed
+  - code: HX613
+    label: 回程
+    date: 10/29（四）
+    from: 關西國際機場
+    dep: "20:15"
+    to: 香港國際機場
+    arr: "23:25"
+    status: confirmed
+
+# ---------- 住宿 ----------
+hotels:
+  - name: Via Inn Kyoto Shijo Muromachi
+    address: 551-2 Yamabushiyama-cho, Nakagyo-ku, Kyoto-shi, Kyoto 604-8172, Japan
+    phone: "+81-75-256-6111"
+    checkin: 2026/10/23
+    checkout: 2026/10/25
+    nights: 2
+    status: confirmed
+  - name: Best Western Hotel Fino Osaka Shinsaibashi
+    address: 1-2-19 Higashishinsaibashi, Chuo-ku, Osaka-shi, Osaka 542-0083, Japan
+    phone: "+81-6-6243-4055"
+    checkin: 2026/10/25
+    checkout: 2026/10/29
+    nights: 4
+    status: confirmed
+
+# ---------- 交通票務 ----------
+transport:
+  - what: JR 特急 HARUKA 關西機場 → 京都（單程）
+    note: 已購買
+    status: confirmed
+  - what: Suica 交通卡
+    note: 已增值 HK$500
+    status: confirmed
+  - what: 丹海高速巴士 京都 → 天橋立（去程）
+    ref: "09248047031"
+    status: confirmed
+  - what: 丹海高速巴士 宮津 → 京都（回程）
+    ref: "09248047901"
+    status: confirmed
+
+# ---------- 預訂相片分類（對應 photos/ 入面嘅資料夾） ----------
 bookings:
   - folder: flight
-    name: ✈️ 機票 / 航班
+    name: ✈️ 機票截圖
   - folder: hotel
-    name: 🏨 酒店
+    name: 🏨 酒店截圖
   - folder: tickets
     name: 🎟️ 門票 / 交通 / 其他
 
+# ---------- 待辦事項（key 同行程項目一樣就會一齊剔） ----------
+todos:
+  - key: day3-dinner
+    day: 3
+    text: Day 3 晚餐尚未確定
+  - key: day4-pillow
+    day: 4
+    text: じぶんまくら 需電話預約（06-6450-8410）
+
 # ---------- 每日行程 ----------
-# 每個 item 可以有：time（時間）、what（做乜）、place（地點，會自動變 Google Maps 連結）、note（備註）
+# 每個項目可以有：
+#   time 時間 / what 做乜 / place 地圖搜尋字（有就出「地圖」掣）
+#   address 地址 / phone 電話 / ref 預約編號 / note 備註
+#   status: confirmed（綠色已確認）或 pending（橙色待處理）
+#   key: 自訂 id（用嚟同待辦事項連動）
 days:
-  - title: 出發 · 抵達大阪
+  # ===== Day 1 =====
+  - title: 京都市區
     items:
-      - what: （待補充）
-  - title: （待補充）
+      - time: "07:55"
+        what: 抵達關西國際機場
+        place: 関西国際空港 第1ターミナル
+      - time: "08:30"
+        what: 特急 HARUKA 前往京都
+        place: 関西空港駅
+        note: 已購買
+        status: confirmed
+      - time: "10:00"
+        what: 抵達京都，前往 Via Inn 寄存行李
+        place: Via Inn Kyoto Shijo Muromachi
+      - time: "10:30"
+        what: Le Labo Kyoto Machiya
+        address: 京都市中京区木屋町通四条上る
+        place: Le Labo Kyoto Machiya
+        note: 購買京都限定 Osmanthus 19 香水
+      - time: "11:30"
+        what: 附近午餐
+      - time: "12:45"
+        what: 抵達 GRAND LINE 髮型屋
+        address: 京都市內（近四条烏丸）
+        phone: "075-746-5151"
+        place: GRAND LINE 京都 美容室
+        ref: BF74764565
+        note: 髮型師：三田村孝音
+        status: confirmed
+      - time: "13:00–16:00"
+        what: 剪髮＋Nuance Perm 燙髮＋Head Spa 頭皮護理
+        note: 現場付款約 ¥15,800
+      - time: "16:10"
+        what: 大丸京都店
+        place: 大丸京都店
+      - time: "16:50"
+        what: 藤井大丸
+        place: 藤井大丸
+      - time: "17:30"
+        what: 京都髙島屋 S.C.
+        place: 京都髙島屋 S.C.
+      - time: "18:00"
+        what: 坂之上商店 四條河原町店 — 牛舌晚餐
+        place: 坂之上商店 四條河原町店
+        ref: SMDALMFH8R
+        status: confirmed
+      - time: "19:05"
+        what: "#FR2 Nadeshiko"
+        address: 祇園町北側
+        place: FR2 Nadeshiko 祇園
+        note: 20:00 關門
+      - time: "19:40"
+        what: 祇園、花見小路散策
+        place: 花見小路通
+      - time: "20:20"
+        what: 新京極商店街、京都BAL、#FR2 KYOTO
+        place: 新京極商店街
+        note: "#FR2 KYOTO 21:00 關門"
+
+  # ===== Day 2 =====
+  - title: 天橋立・丹後由良一日遊
+    alert: 京都丹後鐵道不收 Suica，需準備現金
     items:
-      - what: （待補充）
-  - title: （待補充）
+      - time: "08:30"
+        what: 由酒店出發前往京都駅烏丸口 C2 乘車處
+        place: 京都駅 烏丸口 高速バス C2のりば
+      - time: "09:00"
+        what: 丹海高速巴士 京都駅 → 天橋立駅（11:05 抵達）
+        ref: "09248047031"
+        note: 座位 1D・票價 ¥3,330
+        status: confirmed
+      - time: "11:15"
+        what: 天橋立 View Land（飛龍觀展望台）
+        place: 天橋立ビューランド
+      - time: "12:30"
+        what: 智恩寺
+        place: 智恩寺 宮津
+      - time: "13:18"
+        what: 京都丹後鐵道 天橋立 → 丹後由良（13:38 抵達）
+        note: 只收現金
+      - time: "13:45"
+        what: ハクレイ酒造 天の蔵（白嶺酒造）
+        address: 宮津市字由良949
+        phone: "0772-26-0001"
+        place: ハクレイ酒造 天の蔵
+        note: 營業至 17:00
+      - time: "14:50"
+        what: 由良川橋梁 攝影點
+        place: 由良川橋梁
+      - time: "15:42"
+        what: 丹後由良 → 丹後神崎（列車過橋景觀體驗）
+      - time: "16:30"
+        what: 返回宮津
+      - time: "16:45"
+        what: 富田屋 晚餐
+        address: 宮津駅前
+        phone: "0772-22-0015"
+        place: 富田屋 宮津
+      - time: "18:09"
+        what: 丹海高速巴士 宮津駅 → 京都駅（20:10 抵達）
+        place: 宮津駅
+        ref: "09248047901"
+        note: 座位 1D・票價 ¥3,230
+        status: confirmed
+
+  # ===== Day 3 =====
+  - title: 京都 → 大阪
     items:
-      - what: （待補充）
-  - title: （待補充）
+      - time: "09:00"
+        what: 新風館、二条城
+        place: 二条城
+      - time: "10:45"
+        what: Via Inn 退房
+        place: Via Inn Kyoto Shijo Muromachi
+      - time: "12:00"
+        what: JR 新快速 京都 → 大阪
+      - time: "12:45"
+        what: Best Western Fino 寄存行李
+        place: Best Western Hotel Fino Osaka Shinsaibashi
+      - time: "13:15"
+        what: いかれたNOODLE Fishtons（午市）
+        address: 西大橋
+        place: いかれたNOODLE Fishtons
+      - time: "14:30"
+        what: 心斎橋筋商店街、道頓堀
+        place: 心斎橋筋商店街
+      - time: "15:30"
+        what: かに道楽 道頓堀本店
+        place: かに道楽 道頓堀本店
+      - time: "16:30"
+        what: 日本橋でんでんタウン
+        place: 日本橋でんでんタウン
+      - time: "18:30"
+        what: 晚餐（待定）
+        key: day3-dinner
+        status: pending
+      - time: "21:00"
+        what: 洗衣
+
+  # ===== Day 4 =====
+  - title: 大阪梅田
     items:
-      - what: （待補充）
-  - title: （待補充）
+      - time: "09:45"
+        what: 麦と麺助（拉麵排隊）
+        place: 麦と麺助 中津
+        note: 只收現金
+      - time: "13:00"
+        what: 中崎町 古著街・咖啡店
+        place: 中崎町
+      - time: "14:30"
+        what: じぶんまくら 訂製枕頭
+        address: Grand Front Osaka 南館 5F
+        phone: "06-6450-8410"
+        place: じぶんまくら グランフロント大阪
+        note: 需電話預約
+        key: day4-pillow
+        status: pending
+      - time: "16:00"
+        what: Kith Osaka
+        place: Kith Osaka
+      - time: "17:00"
+        what: LUCUA、Grand Front、NU茶屋町
+        place: LUCUA osaka
+      - time: "18:15"
+        what: HEP FIVE 蠟筆小新
+        place: HEP FIVE
+      - time: "18:45"
+        what: 露天神社
+        place: 露天神社 お初天神
+      - time: "19:15"
+        what: 返回酒店放置物品
+      - time: "19:30"
+        what: 焼肉 無雙武藏 晚餐
+        address: 東心斎橋2-6-19
+        place: 焼肉 無雙武藏 東心斎橋
+        ref: FJCWAWNGL6
+        note: 用餐時間 2 小時
+        status: confirmed
+
+  # ===== Day 5 =====
+  - title: 心斎橋・難波
     items:
-      - what: （待補充）
-  - title: （待補充）
+      - time: 上午
+        what: 自由活動
+      - time: "12:00"
+        what: 金麦 アメリカ村店 午餐
+        place: 金麦 アメリカ村店
+      - time: "13:30"
+        what: 心斎橋PARCO、アメリカ村、堀江
+        place: 心斎橋PARCO
+      - time: "14:15"
+        what: "#FR2 OSAKA"
+        place: FR2 OSAKA
+      - time: "15:00"
+        what: 御堂筋
+        place: 御堂筋 心斎橋
+      - time: "16:00"
+        what: 難波八阪神社
+        place: 難波八阪神社
+        note: 17:00 關門
+      - time: "17:00"
+        what: Spa World
+        place: スパワールド 世界の大温泉
+      - time: "18:30"
+        what: 鮨 難波中 晚餐
+        place: 鮨 難波中
+        note: Omakase 套餐 ¥9,900
+
+  # ===== Day 6 =====
+  - title: 箕面・吹田
     items:
-      - what: （待補充）
-  - title: 回程
+      - time: "09:00"
+        what: 勝尾寺
+        place: 勝尾寺
+      - time: "13:00"
+        what: 萬博紀念公園（太陽之塔）
+        place: 万博記念公園 太陽の塔
+      - time: "16:30"
+        what: Lalaport EXPOCITY（晚餐於此享用）
+        place: ららぽーとEXPOCITY
+
+  # ===== Day 7 =====
+  - title: 返回香港
     items:
-      - what: （待補充）
+      - time: "11:00"
+        what: Best Western 退房，寄存行李
+        place: Best Western Hotel Fino Osaka Shinsaibashi
+      - time: "12:00"
+        what: 牛たんの檸檬 大阪本店 午餐
+        place: 牛たんの檸檬 大阪本店
+        ref: 76GTLTG3A5
+        note: 用餐時間 1 小時
+        status: confirmed
+      - time: "13:00"
+        what: 最後購物（心斎橋／難波）
+      - time: "16:15"
+        what: 取回行李
+      - time: "17:00"
+        what: 難波駅 南海電鐵空港急行 → 關西國際機場
+        place: 南海 なんば駅
+      - time: "20:15"
+        what: HX613 起飛返回香港
+        key: flight-HX613
+        status: confirmed
+      - time: "23:25"
+        what: 抵達香港

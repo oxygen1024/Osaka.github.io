@@ -1,0 +1,5 @@
+{%- if include.status == "confirmed" -%}
+<label class="tag ok"><input type="checkbox" data-key="{{ include.key }}"><span>已確認</span></label>
+{%- elsif include.status == "pending" -%}
+<label class="tag todo"><input type="checkbox" data-key="{{ include.key }}"><span>待處理</span></label>
+{%- endif -%}
