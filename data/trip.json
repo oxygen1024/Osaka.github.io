@@ -826,13 +826,13 @@
           "id": "d7-05",
           "time": "17:00",
           "what": "難波駅 南海電鐵空港急行 → 關西國際機場",
-          "place": "南海 なんば駅",
+          "status": "",
+          "priority": "",
           "address": "",
+          "place": "南海 なんば駅",
           "phone": "",
           "ref": "",
-          "note": "",
-          "status": "",
-          "priority": ""
+          "note": "https://m.ctrip.com/webapp/ticket/voucherdetailibu?orderid=1688901913655558&token=51dfe4985bc5ce2d269cdc645f8ecc8a&locale=zh-HK"
         },
         {
           "id": "d7-06",
