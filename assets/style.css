@@ -1,0 +1,142 @@
+:root {
+  --bg: #faf7f2;
+  --card: #ffffff;
+  --text: #222;
+  --muted: #777;
+  --accent: #c8102e;
+  --line: #e6e0d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16161a;
+    --card: #222228;
+    --text: #eee;
+    --muted: #999;
+    --accent: #ff5a6e;
+    --line: #34343c;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang HK", "Noto Sans HK", "Microsoft JhengHei", sans-serif;
+  line-height: 1.5;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.top {
+  background: var(--accent);
+  color: #fff;
+  padding: calc(16px + env(safe-area-inset-top)) 16px 14px;
+}
+.top h1 { margin: 0; font-size: 1.4rem; }
+.top p { margin: 2px 0 0; opacity: .9; font-size: .9rem; }
+
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 58px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tabs button small { font-weight: 400; font-size: .72rem; color: var(--muted); }
+.tabs button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tabs button.active small { color: #fff; }
+.tabs button.today:not(.active) { border-color: var(--accent); }
+
+main { max-width: 720px; margin: 0 auto; padding: 16px; }
+.panel { display: none; }
+.panel.active { display: block; }
+.panel h2 { margin: 0; font-size: 1.3rem; display: flex; gap: 10px; align-items: baseline; }
+.panel h2 .date { font-size: .95rem; color: var(--muted); font-weight: 500; }
+.panel h3 { margin: 24px 0 8px; font-size: 1rem; }
+.daytitle { margin: 2px 0 12px; font-size: 1.05rem; color: var(--accent); font-weight: 600; }
+
+.timeline { list-style: none; margin: 0; padding: 0; }
+.timeline li {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.timeline time { display: block; font-size: .8rem; font-weight: 700; color: var(--accent); }
+.timeline .what { font-weight: 600; }
+.timeline .map { display: inline-block; margin-top: 4px; font-size: .88rem; color: var(--accent); text-decoration: none; }
+.timeline .note { margin-top: 4px; font-size: .88rem; color: var(--muted); white-space: pre-line; }
+
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.thumb {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.thumb img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block; background: var(--line); }
+.thumb span { padding: 6px 8px; font-size: .78rem; word-break: break-all; }
+.thumb.pdf b { display: flex; align-items: center; justify-content: center; aspect-ratio: 3 / 4; font-size: 1.2rem; background: var(--line); }
+.empty { color: var(--muted); font-size: .85rem; margin: 0; }
+.empty code { font-size: .8rem; }
+
+footer { text-align: center; color: var(--muted); font-size: .75rem; padding: 24px 16px 32px; }
+
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(0, 0, 0, .92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.viewer[hidden] { display: none; }
+.viewer img { max-width: 100%; max-height: calc(100% - 60px); object-fit: contain; touch-action: pinch-zoom; }
+.viewer .caption { color: #ddd; font-size: .85rem; margin: 8px 0 0; }
+.viewer .close {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .15);
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+}

@@ -1,0 +1,12 @@
+{
+  "name": "大阪之旅",
+  "short_name": "大阪之旅",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#faf7f2",
+  "theme_color": "#c8102e",
+  "icons": [
+    { "src": "assets/icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

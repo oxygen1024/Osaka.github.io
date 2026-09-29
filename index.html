@@ -1,0 +1,87 @@
+---
+layout: null
+---
+{%- assign trip = site.data.trip -%}
+{%- assign ver = site.time | date: "%s" -%}
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{{ trip.title }}</title>
+  <meta name="theme-color" content="#c8102e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="大阪之旅">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon.png">
+  <link rel="stylesheet" href="assets/style.css?v={{ ver }}">
+</head>
+<body>
+  <header class="top">
+    <h1>{{ trip.title }}</h1>
+    <p>{{ trip.subtitle }}{% if trip.start_date %} · {{ trip.start_date | date: "%Y/%m/%d" }} 出發{% endif %}</p>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button type="button" data-tab="bookings">📎<small>預訂</small></button>
+    {%- for day in trip.days %}
+    {%- assign n = forloop.index0 | times: 86400 %}
+    <button type="button" data-tab="day{{ forloop.index }}"{% if trip.start_date %} data-date="{{ trip.start_date | date: '%s' | plus: n | date: '%Y-%m-%d' }}"{% endif %}>
+      Day {{ forloop.index }}
+      {%- if trip.start_date %}<small>{{ trip.start_date | date: '%s' | plus: n | date: '%-m/%-d' }}</small>{% endif %}
+    </button>
+    {%- endfor %}
+  </nav>
+
+  <main>
+    <section class="panel" id="bookings">
+      <h2>預訂資料</h2>
+      {%- for cat in trip.bookings %}
+      <h3>{{ cat.name }}</h3>
+      {%- assign prefix = "/photos/" | append: cat.folder | append: "/" %}
+      {% include gallery.html prefix=prefix %}
+      {%- endfor %}
+    </section>
+
+    {%- for day in trip.days %}
+    {%- assign n = forloop.index0 | times: 86400 %}
+    <section class="panel" id="day{{ forloop.index }}">
+      <h2>
+        <span class="daynum">Day {{ forloop.index }}</span>
+        {%- if trip.start_date %}<span class="date">{{ trip.start_date | date: '%s' | plus: n | date: '%-m月%-d日 (%a)' }}</span>{% endif %}
+      </h2>
+      <p class="daytitle">{{ day.title }}</p>
+      {%- if day.items %}
+      <ol class="timeline">
+        {%- for item in day.items %}
+        <li>
+          {%- if item.time %}<time>{{ item.time }}</time>{% endif %}
+          <div class="what">{{ item.what }}</div>
+          {%- if item.place %}
+          <a class="map" href="https://www.google.com/maps/search/?api=1&amp;query={{ item.place | cgi_escape }}" target="_blank" rel="noopener">📍 {{ item.place }}</a>
+          {%- endif %}
+          {%- if item.note %}<div class="note">{{ item.note }}</div>{% endif %}
+        </li>
+        {%- endfor %}
+      </ol>
+      {%- endif %}
+      <h3>📷 相片 / 文件</h3>
+      {%- assign prefix = "/photos/day" | append: forloop.index | append: "/" %}
+      {% include gallery.html prefix=prefix %}
+    </section>
+    {%- endfor %}
+  </main>
+
+  <footer>最後更新：{{ site.time | date: "%Y-%m-%d %H:%M" }} (UTC)</footer>
+
+  <div class="viewer" id="viewer" hidden>
+    <button type="button" class="close" aria-label="關閉">✕</button>
+    <img alt="">
+    <p class="caption"></p>
+  </div>
+
+  <script src="assets/app.js?v={{ ver }}"></script>
+</body>
+</html>

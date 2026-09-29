@@ -1,0 +1,41 @@
+# ==============================================
+#  行程資料：改呢個檔就會更新網站
+# ==============================================
+title: 大阪之旅 🇯🇵
+subtitle: 7 日行程
+# 第一日日期（格式 YYYY-MM-DD）。填咗之後，旅行期間打開網站會自動跳去「今日」嗰日
+start_date:
+
+# ---------- 預訂資料分類（對應 photos/ 入面嘅資料夾） ----------
+bookings:
+  - folder: flight
+    name: ✈️ 機票 / 航班
+  - folder: hotel
+    name: 🏨 酒店
+  - folder: tickets
+    name: 🎟️ 門票 / 交通 / 其他
+
+# ---------- 每日行程 ----------
+# 每個 item 可以有：time（時間）、what（做乜）、place（地點，會自動變 Google Maps 連結）、note（備註）
+days:
+  - title: 出發 · 抵達大阪
+    items:
+      - what: （待補充）
+  - title: （待補充）
+    items:
+      - what: （待補充）
+  - title: （待補充）
+    items:
+      - what: （待補充）
+  - title: （待補充）
+    items:
+      - what: （待補充）
+  - title: （待補充）
+    items:
+      - what: （待補充）
+  - title: （待補充）
+    items:
+      - what: （待補充）
+  - title: 回程
+    items:
+      - what: （待補充）
