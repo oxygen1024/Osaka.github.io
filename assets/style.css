@@ -426,3 +426,29 @@ body:has(li.dragging) { user-select: none; -webkit-user-select: none; cursor: gr
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- 連結 / 相片刪除 ---------- */
+.btn.link { color: #1a56c4; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+@media (prefers-color-scheme: dark) { .btn.link { color: #8ab4ff; } }
+.tile { position: relative; display: flex; }
+.tile > .thumb { flex: 1; min-width: 0; }
+.tile-del {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .55);
+  color: #fff;
+  font-size: .95rem;
+  cursor: pointer;
+  transition: transform .12s, background-color .2s;
+}
+.tile-del:active { transform: scale(.88); background: #b3261e; }
+.viewer #photo-delete { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; margin: 0; }
+.note, .field, .what { overflow-wrap: anywhere; }
+.inline-link { color: #1a56c4; font-weight: 600; text-decoration: none; }
+@media (prefers-color-scheme: dark) { .inline-link { color: #8ab4ff; } }

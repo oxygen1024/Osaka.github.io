@@ -285,12 +285,48 @@
   var PRIO = { high: ['🔴 高', 'high'], mid: ['🔵 中', 'mid'], low: ['⚪ 低', 'low'] };
   function prioChip(p) { return PRIO[p] ? el('span', { class: 'prio ' + PRIO[p][1], text: PRIO[p][0] }) : null; }
 
-  function actions(place, phone) {
-    if (!place && !phone) return null;
+  // 「名稱 | 網址」或者淨網址，一行一條；只接受 http(s)
+  function parseLinks(text) {
+    return String(text || '').split(/\n+/).map(function (line) {
+      line = line.trim();
+      if (!line) return null;
+      var label = '', url = line;
+      var bar = line.lastIndexOf('|');
+      if (bar > 0) { label = line.slice(0, bar).trim(); url = line.slice(bar + 1).trim(); }
+      if (!/^https?:\/\//i.test(url)) {
+        if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(url)) url = 'https://' + url;
+        else return null;
+      }
+      try {
+        var u = new URL(url);
+        return { url: u.href, label: label || u.hostname.replace(/^www\./, '') };
+      } catch (e) { return null; }
+    }).filter(Boolean);
+  }
+
+  // 備註入面嘅網址變成可以撳嘅連結
+  function linkify(text) {
+    var out = [], re = /https?:\/\/[^\s<>"]+/g, last = 0, m;
+    while ((m = re.exec(text))) {
+      if (m.index > last) out.push(text.slice(last, m.index));
+      var label = m[0];
+      try { var u = new URL(m[0]); label = '🔗 ' + u.hostname.replace(/^www\./, '') + (u.pathname.length > 1 ? '/…' : ''); } catch (e) {}
+      out.push(el('a', { class: 'inline-link', href: m[0], target: '_blank', rel: 'noopener', text: label }));
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) out.push(text.slice(last));
+    return out;
+  }
+
+  function actions(place, phone, links) {
+    var ls = parseLinks(links);
+    if (!place && !phone && !ls.length) return null;
     return el('div', { class: 'actions' }, [
       place ? el('a', { class: 'btn', href: mapUrl(place), target: '_blank', rel: 'noopener', text: '📍 地圖' }) : null,
       phone ? el('a', { class: 'btn', href: telUrl(phone), text: '📞 ' + phone }) : null
-    ]);
+    ].concat(ls.map(function (l) {
+      return el('a', { class: 'btn link', href: l.url, target: '_blank', rel: 'noopener', text: '🔗 ' + l.label });
+    })));
   }
 
   function renderOverview() {
@@ -360,8 +396,8 @@
       el('div', { class: 'what', text: item.what }),
       item.address ? el('div', { class: 'field', text: '🏠 ' + item.address }) : null,
       item.ref ? el('div', { class: 'field' }, ['🔖 預約編號：', el('code', { class: 'ref', text: item.ref })]) : null,
-      item.note ? el('div', { class: 'note', text: item.note }) : null,
-      actions(place, item.phone)
+      item.note ? el('div', { class: 'note' }, linkify(item.note)) : null,
+      actions(place, item.phone, item.links)
     ]);
   }
 
@@ -489,12 +525,15 @@
     var wrap = el('div', { class: 'gallery-wrap' });
     var grid = el('div', { class: 'gallery' }, files.map(function (p) {
       var name = p.path.slice(prefix.length).replace(/\.[^.]+$/, '');
-      if (PDF_EXT.test(p.path)) {
-        return el('a', { class: 'thumb pdf', href: p.url, target: '_blank', rel: 'noopener' }, [el('b', { text: '📄 PDF' }), el('span', { text: name })]);
-      }
-      return el('button', { type: 'button', class: 'thumb', onclick: function () { openViewer(p, name); } }, [
-        el('img', { src: p.url, loading: 'lazy', alt: name }),
-        el('span', { text: name })
+      var thumb = PDF_EXT.test(p.path)
+        ? el('a', { class: 'thumb pdf', href: p.url, target: '_blank', rel: 'noopener' }, [el('b', { text: '📄 PDF' }), el('span', { text: name })])
+        : el('button', { type: 'button', class: 'thumb', onclick: function () { openViewer(p, name); } }, [
+          el('img', { src: p.url, loading: 'lazy', alt: name }),
+          el('span', { text: name })
+        ]);
+      return el('div', { class: 'tile' }, [
+        thumb,
+        state.token && p.sha ? el('button', { type: 'button', class: 'tile-del', 'aria-label': '刪除', text: '🗑', onclick: function () { deletePhoto(p, name); } }) : null
       ]);
     }));
     wrap.appendChild(grid);
@@ -609,23 +648,24 @@
   }
   function closeViewer() { viewer.hidden = true; vImg.removeAttribute('src'); viewing = null; }
   viewer.addEventListener('click', function (e) { if (e.target === viewer || e.target.classList.contains('close')) closeViewer(); });
-  vDel.addEventListener('click', function () {
-    var p = viewing;
-    if (!p || !confirm('確定刪除「' + vCap.textContent + '」？')) return;
+  vDel.addEventListener('click', function () { if (viewing) deletePhoto(viewing, vCap.textContent); });
+
+  function deletePhoto(p, name) {
+    if (!confirm('確定刪除「' + name + '」？')) return;
     api('DELETE', 'contents/' + encPath(p.path), { message: '手機刪除相片 ' + p.path, sha: p.sha, branch: state.branch })
       .then(function () {
         state.photos = state.photos.filter(function (x) { return x !== p; });
         closeViewer();
         render();
-        toast('已刪除');
+        toast('已刪除 🗑');
       }).catch(function (e) { toast('刪除失敗：' + e.message, 4000); });
-  });
+  }
 
   // ================= 編輯行程 =================
   var sheet = document.getElementById('sheet');
   var form = document.getElementById('edit-form');
   var editing = null; // {di, ii}
-  var FIELDS = ['time', 'what', 'status', 'priority', 'address', 'place', 'phone', 'ref', 'note'];
+  var FIELDS = ['time', 'what', 'status', 'priority', 'address', 'place', 'phone', 'ref', 'note', 'links'];
 
   function openEdit(di, ii) {
     editing = { di: di, ii: ii };
