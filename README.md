@@ -1,44 +1,45 @@
 # 京都・大阪 7日6夜自由行 🇯🇵
 
-手機睇嘅 7 日關西行程網站（GitHub Pages）：總覽（機票、酒店、交通）、每日行程、待辦事項。
+手機睇嘅 7 日關西行程網站（GitHub Pages）：總覽（機票、酒店、交通）、每日行程、待辦事項、設定。
 
-## 📱 喺手機打開
+網址：https://oxygen1024.github.io/Osaka.github.io/
 
-1. GitHub → 呢個 repo → **Settings → Pages**
-2. Source 揀 **Deploy from a branch**，Branch 揀 `main`、資料夾 `/ (root)`，Save
-3. 等 1–2 分鐘，網址會係：`https://oxygen1024.github.io/Osaka.github.io/`
-4. 手機用 Safari / Chrome 打開 →「分享」→「加入主畫面」，之後好似 app 咁一撳就開
+## ✏️ 喺手機改行程
 
-## 🖼️ 用電腦加相（機票、酒店、booking 截圖）
+- 每張行程卡右上角有 **✏️**：可以改時間、名稱、地址、電話、預約編號、備註
+- **狀態**：✅ 已確認（綠色）／🟠 待處理（橙色，會自動出現喺「待辦」頁）
+- **優先度**：🔴 高／🔵 中／⚪ 低
+- **次序**：表單入面「⬆️ 上移／⬇️ 下移」；亦可以用「放喺邊日」搬去第二日
+- 每日底部有「＋ 新增行程」；當日主題旁邊嘅 ✏️ 可以改主題同 ⚠️ 提示
 
-唔使改任何 code，放相入資料夾就會自動喺手機出現：
+## ☁️ 連接 GitHub（同步 + 手機上載相片）
 
-1. 電腦打開 GitHub 呢個 repo → 入去 `photos/` 入面對應嘅資料夾
-2. 撳 **Add file → Upload files**，將相拖入去 → **Commit changes**
-3. 等大約 1–2 分鐘，手機 reload 就見到
+未連接之前，修改只會存喺嗰部手機。連接之後，修改同相片會直接存入呢個 repo，電腦同手機都睇到。
+
+1. 開 https://github.com/settings/personal-access-tokens/new
+2. Repository access →「Only select repositories」→ 揀 `Osaka.github.io`
+3. Permissions → Repository permissions → **Contents: Read and write**
+4. Generate token，複製 `github_pat_…`
+5. 網站「⚙️ 設定」→ 貼 token → 儲存並連接
+
+Token 只存喺嗰部裝置嘅瀏覽器；唔見手機可以喺 GitHub 刪除個 token。
+
+## 📤 上載相片
+
+- **手機**：每個相片區（總覽嘅機票／酒店／門票，同每日）都有「📤 上載相片 / PDF」掣。相片會自動壓縮到 2000px JPEG
+- **電腦**：GitHub → `photos/` 入面對應資料夾 → Add file → Upload files
 
 | 資料夾 | 出現喺邊 |
 | --- | --- |
-| `photos/flight/` | 預訂 → ✈️ 機票 / 航班 |
-| `photos/hotel/` | 預訂 → 🏨 酒店 |
-| `photos/tickets/` | 預訂 → 🎟️ 門票 / 交通 / 其他 |
-| `photos/day1/` … `photos/day7/` | 對應嗰日嘅「相片 / 文件」 |
+| `photos/flight/` | 總覽 → ✈️ 機票截圖 |
+| `photos/hotel/` | 總覽 → 🏨 酒店截圖 |
+| `photos/tickets/` | 總覽 → 🎟️ 門票 / 交通 / 其他 |
+| `photos/day1/` … `photos/day7/` | 對應嗰日 |
 
-- 支援 `.jpg` `.jpeg` `.png` `.webp` `.gif` 同 `.pdf`
-- 相片按檔名排序，想控制次序可以用 `01_去程.png`、`02_回程.png` 咁命名
-- 檔名會顯示喺相下面，所以可以直接用中文改個有意思嘅名
-- iPhone 嘅 `.HEIC` 相 Android / 電腦瀏覽器睇唔到，建議截圖（PNG）或者轉做 JPG
+## 🗂 資料
 
-## ✏️ 改行程
-
-行程全部喺 [`_data/trip.yml`](_data/trip.yml)。填咗 `start_date` 之後，每日會自動計日期，旅行期間打開網站會自動跳去「今日」。
+行程全部喺 [`data/trip.json`](data/trip.json)。網站上嘅修改都係改呢個檔。
 
 ## ⚠️ 私隱
 
-GitHub Pages 免費版嘅 repo 係公開嘅，**任何人有網址都睇到啲相**（網站已設定唔俾 Google 收錄，但唔等於加密）。上載 booking 截圖之前，建議遮咗護照號碼、電話、完整 booking reference 等資料。
-
-## ✅ 已確認 / 待處理 剔選框
-
-- 行程項目加 `status: confirmed` 會顯示綠色「已確認」，`status: pending` 會顯示橙色「待處理」，兩種都有剔選框
-- 剔選狀態只會儲存喺嗰部手機嘅瀏覽器（唔會上載），換手機或者清除瀏覽器資料就會重設
-- 「待辦」頁嘅項目用 `key` 同行程項目連動，喺邊度剔都會同步
+GitHub Pages 免費版 repo 係公開嘅，有網址嘅人都睇到行程同相片（已設定唔俾 Google 收錄，但唔等於加密）。上載 booking 截圖前建議遮咗護照號碼等資料。

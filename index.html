@@ -1,16 +1,13 @@
 ---
 layout: null
 ---
-{%- assign trip = site.data.trip -%}
 {%- assign ver = site.time | date: "%s" -%}
-{%- assign wd = "日,一,二,三,四,五,六" | split: "," -%}
-{%- assign start = trip.start_date | date: "%s" | plus: 0 -%}
 <!doctype html>
 <html lang="zh-Hant-HK">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>{{ trip.title }}</title>
+  <title>京都・大阪 7日6夜自由行</title>
   <meta name="theme-color" content="#c8102e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="關西之旅">
@@ -20,143 +17,93 @@ layout: null
   <link rel="apple-touch-icon" href="assets/icon.png">
   <link rel="stylesheet" href="assets/style.css?v={{ ver }}">
 </head>
-<body>
+<body data-repo="{{ site.github.repository_nwo | default: 'oxygen1024/Osaka.github.io' }}" data-branch="{{ site.github.source.branch | default: 'main' }}" data-ver="{{ ver }}">
   <header class="top">
-    <h1>{{ trip.title }}</h1>
-    {%- assign w1 = trip.start_date | date: "%w" | plus: 0 %}
-    {%- assign w2 = trip.end_date | date: "%w" | plus: 0 %}
-    <p>{{ trip.start_date | date: "%Y/%-m/%-d" }}（{{ wd[w1] }}）– {{ trip.end_date | date: "%-m/%-d" }}（{{ wd[w2] }}）· {{ trip.travellers }} 人</p>
+    <h1 id="trip-title">京都・大阪 7日6夜自由行</h1>
+    <p id="trip-sub"></p>
+    <button type="button" class="sync" id="sync" data-tab="settings"></button>
   </header>
 
-  <nav class="tabs" id="tabs">
-    <button type="button" data-tab="overview">🧳<small>總覽</small></button>
-    {%- for day in trip.days %}
-    {%- assign ts = forloop.index0 | times: 86400 | plus: start %}
-    <button type="button" data-tab="day{{ forloop.index }}" data-date="{{ ts | date: '%Y-%m-%d' }}">
-      Day {{ forloop.index }}<small>{{ ts | date: '%-m/%-d' }}</small>
-    </button>
-    {%- endfor %}
-    <button type="button" data-tab="todo">✅<small>待辦 <b class="badge" id="todo-count"></b></small></button>
-  </nav>
+  <nav class="tabs" id="tabs"></nav>
+  <main id="main"><p class="muted">載入中…</p></main>
+  <footer>網站版本：{{ site.time | date: "%Y-%m-%d %H:%M" }} (UTC)</footer>
 
-  <main>
-    <!-- ========== 總覽 ========== -->
-    <section class="panel" id="overview">
-      <h2>行程總覽</h2>
-      <ol class="daylist">
-        {%- for day in trip.days %}
-        {%- assign ts = forloop.index0 | times: 86400 | plus: start %}
-        {%- assign w = ts | date: '%w' | plus: 0 %}
-        <li><a href="#day{{ forloop.index }}"><b>Day {{ forloop.index }}</b><span>{{ ts | date: '%-m/%-d' }}（{{ wd[w] }}）</span>{{ day.title }}</a></li>
-        {%- endfor %}
-      </ol>
-
-      <h3>✈️ 機票</h3>
-      {%- for f in trip.flights %}
-      <div class="card">
-        <div class="card-head"><b>{{ f.label }}・{{ f.code }}</b>{% assign k = "flight-" | append: f.code %}{% include tag.html status=f.status key=k %}</div>
-        <div class="muted">{{ f.date }}</div>
-        <div class="flight">
-          <div><strong>{{ f.dep }}</strong><span>{{ f.from }}</span></div>
-          <div class="arrow">→</div>
-          <div><strong>{{ f.arr }}</strong><span>{{ f.to }}</span></div>
+  <!-- 編輯表單 -->
+  <div class="sheet" id="sheet" hidden>
+    <form class="sheet-body" id="edit-form" autocomplete="off">
+      <div class="sheet-head">
+        <b id="edit-title">編輯行程</b>
+        <button type="button" class="icon" data-close aria-label="關閉">✕</button>
+      </div>
+      <label>時間<input name="time" placeholder="例如 14:30"></label>
+      <label>名稱 / 做乜 *<input name="what" required></label>
+      <div class="two">
+        <label>狀態
+          <select name="status">
+            <option value="">—</option>
+            <option value="confirmed">✅ 已確認</option>
+            <option value="pending">🟠 待處理</option>
+          </select>
+        </label>
+        <label>優先度
+          <select name="priority">
+            <option value="">—</option>
+            <option value="high">🔴 高（必去）</option>
+            <option value="mid">🔵 中</option>
+            <option value="low">⚪ 低（得閒先去）</option>
+          </select>
+        </label>
+      </div>
+      <label>地址<input name="address"></label>
+      <label>地圖搜尋字（Google Maps）<input name="place" placeholder="留空就用地址"></label>
+      <div class="two">
+        <label>電話<input name="phone" type="tel"></label>
+        <label>預約編號<input name="ref"></label>
+      </div>
+      <label>備註<textarea name="note" rows="3"></textarea></label>
+      <div class="two">
+        <label>放喺邊日<select name="day"></select></label>
+        <div class="move">
+          <span>次序</span>
+          <div>
+            <button type="button" class="btn" data-move="-1">⬆️ 上移</button>
+            <button type="button" class="btn" data-move="1">⬇️ 下移</button>
+          </div>
         </div>
       </div>
-      {%- endfor %}
-
-      <h3>🏨 住宿</h3>
-      {%- for h in trip.hotels %}
-      <div class="card">
-        <div class="card-head"><b>{{ h.name }}</b>{% assign k = "hotel-" | append: forloop.index %}{% include tag.html status=h.status key=k %}</div>
-        <div class="muted">{{ h.checkin }} 入住 → {{ h.checkout }} 退房（{{ h.nights }} 晚）</div>
-        <div class="field">🏠 {{ h.address }}</div>
-        <div class="actions">
-          {% include maplink.html q=h.name %}
-          <a class="btn" href="tel:{{ h.phone | remove: '-' }}">📞 {{ h.phone }}</a>
-        </div>
+      <div class="sheet-actions">
+        <button type="button" class="btn danger" id="edit-delete">🗑 刪除</button>
+        <button type="submit" class="btn primary">💾 儲存</button>
       </div>
-      {%- endfor %}
+    </form>
+  </div>
 
-      <h3>🚆 交通票務</h3>
-      {%- for t in trip.transport %}
-      <div class="card">
-        <div class="card-head"><b>{{ t.what }}</b>{% assign k = "transport-" | append: forloop.index %}{% include tag.html status=t.status key=k %}</div>
-        {%- if t.ref %}<div class="field">🔖 預約編號：<code class="ref">{{ t.ref }}</code></div>{% endif %}
-        {%- if t.note %}<div class="muted">{{ t.note }}</div>{% endif %}
+  <!-- 編輯當日 -->
+  <div class="sheet" id="day-sheet" hidden>
+    <form class="sheet-body" id="day-form" autocomplete="off">
+      <div class="sheet-head">
+        <b>編輯當日資料</b>
+        <button type="button" class="icon" data-close aria-label="關閉">✕</button>
       </div>
-      {%- endfor %}
+      <label>當日主題<input name="title"></label>
+      <label>⚠️ 提示（留空就唔顯示）<input name="alert"></label>
+      <div class="sheet-actions">
+        <span></span>
+        <button type="submit" class="btn primary">💾 儲存</button>
+      </div>
+    </form>
+  </div>
 
-      <h3>📎 預訂截圖</h3>
-      {%- for cat in trip.bookings %}
-      <h4>{{ cat.name }}</h4>
-      {%- assign prefix = "/photos/" | append: cat.folder | append: "/" %}
-      {% include gallery.html prefix=prefix %}
-      {%- endfor %}
-    </section>
-
-    <!-- ========== 每日行程 ========== -->
-    {%- for day in trip.days %}
-    {%- assign dn = forloop.index %}
-    {%- assign ts = forloop.index0 | times: 86400 | plus: start %}
-    {%- assign w = ts | date: '%w' | plus: 0 %}
-    <section class="panel" id="day{{ dn }}">
-      <h2>
-        <span>Day {{ dn }}</span>
-        <span class="date">{{ ts | date: '%Y/%-m/%-d' }}（{{ wd[w] }}）</span>
-      </h2>
-      <p class="daytitle">{{ day.title }}</p>
-      {%- if day.alert %}<p class="alert">⚠️ {{ day.alert }}</p>{% endif %}
-      <ol class="timeline">
-        {%- for item in day.items %}
-        {%- assign key = item.key | default: "" %}
-        {%- if key == "" %}{% assign key = "d" | append: dn | append: "-" | append: forloop.index %}{% endif %}
-        <li class="{{ item.status }}">
-          <div class="row">
-            {%- if item.time %}<time>{{ item.time }}</time>{% endif %}
-            {% include tag.html status=item.status key=key %}
-          </div>
-          <div class="what">{{ item.what }}</div>
-          {%- if item.address %}<div class="field">🏠 {{ item.address }}</div>{% endif %}
-          {%- if item.ref %}<div class="field">🔖 預約編號：<code class="ref">{{ item.ref }}</code></div>{% endif %}
-          {%- if item.note %}<div class="note">{{ item.note }}</div>{% endif %}
-          {%- if item.place or item.phone %}
-          <div class="actions">
-            {%- if item.place %}{% include maplink.html q=item.place %}{% endif %}
-            {%- if item.phone %}<a class="btn" href="tel:{{ item.phone | remove: '-' }}">📞 {{ item.phone }}</a>{% endif %}
-          </div>
-          {%- endif %}
-        </li>
-        {%- endfor %}
-      </ol>
-      <h3>📷 相片 / 文件</h3>
-      {%- assign prefix = "/photos/day" | append: dn | append: "/" %}
-      {% include gallery.html prefix=prefix %}
-    </section>
-    {%- endfor %}
-
-    <!-- ========== 待辦 ========== -->
-    <section class="panel" id="todo">
-      <h2>待辦事項</h2>
-      <p class="muted">剔咗之後，對應嗰日行程都會同步剔埋（只儲存喺呢部手機）。</p>
-      <ul class="todolist">
-        {%- for t in trip.todos %}
-        <li>
-          <label class="tag todo"><input type="checkbox" data-key="{{ t.key }}" class="todo-box"><span>待處理</span></label>
-          <span class="todo-text">{{ t.text }}</span>
-          <a class="btn" href="#day{{ t.day }}">Day {{ t.day }} →</a>
-        </li>
-        {%- endfor %}
-      </ul>
-    </section>
-  </main>
-
-  <footer>最後更新：{{ site.time | date: "%Y-%m-%d %H:%M" }} (UTC)</footer>
-
+  <!-- 相片檢視 -->
   <div class="viewer" id="viewer" hidden>
     <button type="button" class="close" aria-label="關閉">✕</button>
     <img alt="">
     <p class="caption"></p>
+    <button type="button" class="btn danger" id="photo-delete" hidden>🗑 刪除呢張相</button>
   </div>
+
+  <input type="file" id="file-input" accept="image/*,application/pdf" multiple hidden>
+  <div class="toast" id="toast" hidden></div>
 
   <script src="assets/app.js?v={{ ver }}"></script>
 </body>
