@@ -94,7 +94,7 @@
 
   // ================= GitHub API =================
   function api(method, path, data) {
-    return fetch('https://api.github.com/repos/' + state.repo + '/' + path, {
+    return fetch('https://api.github.com/repos/' + state.repo + (path ? '/' + path : ''), {
       method: method,
       headers: {
         'Authorization': 'Bearer ' + state.token,
@@ -105,13 +105,23 @@
       cache: 'no-store'
     }).then(function (r) {
       if (!r.ok) {
-        var err = new Error('GitHub ' + r.status);
+        var err = new Error(API_ERR[r.status] || ('GitHub 錯誤 ' + r.status));
         err.status = r.status;
         throw err;
       }
       return r.status === 204 ? null : r.json();
+    }, function () {
+      throw new Error('連唔到 GitHub（檢查網絡；如果 token 係複製落嚟，試吓重新貼過）');
     });
   }
+
+  var API_ERR = {
+    401: 'Token 無效或者已過期，請重新產生',
+    403: 'Token 冇權限：Contents 要揀「Read and write」',
+    404: '搵唔到 repo：產生 token 時要揀 Osaka.github.io 呢個 repository',
+    409: '版本衝突',
+    422: '版本衝突'
+  };
 
   function rawUrl(path) {
     return 'https://raw.githubusercontent.com/' + state.repo + '/' + encodeURIComponent(state.branch) + '/' + encPath(path);
@@ -417,17 +427,21 @@
         el('label', null, ['Branch（網站用緊邊個 branch）', branchInput]),
         el('div', { class: 'actions' }, [
           el('button', { type: 'button', class: 'btn primary', text: '💾 儲存並連接', onclick: function () {
-            state.token = tokenInput.value.trim();
+            // 清走複製時夾帶嘅空格、換行或者全形字元
+            state.token = tokenInput.value.replace(/[^\x21-\x7e]/g, '');
+            tokenInput.value = state.token;
             state.branch = branchInput.value.trim() || body.dataset.branch || 'main';
-            lsSet(LS.token, state.token || null);
             lsSet(LS.branch, state.branch === body.dataset.branch ? null : state.branch);
-            if (!state.token) { toast('已中斷連接'); boot(); return; }
+            if (!state.token) { lsSet(LS.token, null); toast('已中斷連接'); boot(); return; }
+            toast('連接緊…', 10000);
             api('GET', '').then(function (r) {
-              if (!r.permissions || !r.permissions.push) throw new Error('Token 冇寫入權限');
+              if (!r.permissions || !r.permissions.push) throw new Error(API_ERR[403]);
+              lsSet(LS.token, state.token);
               toast('連接成功 ✅');
               boot();
             }).catch(function (e) {
-              toast('連接失敗：' + e.message + '（檢查 token 同權限）', 5000);
+              state.token = lsGet(LS.token) || '';
+              toast('連接失敗：' + e.message, 7000);
             });
           } }),
           connected ? el('button', { type: 'button', class: 'btn', text: '中斷連接', onclick: function () {
