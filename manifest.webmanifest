@@ -1,10 +1,10 @@
 {
-  "name": "京都・大阪 7日6夜",
-  "short_name": "關西之旅",
+  "name": "旅のしおり · 京都・大阪 7日6夜",
+  "short_name": "旅のしおり",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#faf7f2",
-  "theme_color": "#c8102e",
+  "background_color": "#F3EEE5",
+  "theme_color": "#F3EEE5",
   "icons": [
     { "src": "assets/icon.png", "sizes": "180x180", "type": "image/png" },
     { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" }

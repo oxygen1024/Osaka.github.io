@@ -8,103 +8,135 @@ layout: null
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>京都・大阪 7日6夜自由行</title>
-  <meta name="theme-color" content="#c8102e">
+  <meta name="description" content="旅のしおり — 京都・大阪 7 日 6 夜行程">
+  <meta name="theme-color" content="#F3EEE5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#12110E" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="關西之旅">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="旅のしおり">
   <meta name="robots" content="noindex, nofollow">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Noto+Serif+TC:wght@600;900&display=swap">
   <link rel="stylesheet" href="assets/style.css?v={{ ver }}">
 </head>
-<body data-repo="{{ site.github.repository_nwo | default: 'oxygen1024/Osaka.github.io' }}" data-branch="{{ site.github.source.branch | default: 'main' }}" data-ver="{{ ver }}">
-  <header class="top">
-    <h1 id="trip-title">京都・大阪 7日6夜自由行</h1>
-    <p id="trip-sub"></p>
-    <button type="button" class="sync" id="sync" data-tab="settings"></button>
-  </header>
+<body data-repo="{{ site.github.repository_nwo | default: 'oxygen1024/Osaka.github.io' }}" data-branch="{{ site.github.source.branch | default: 'main' }}">
+  <div class="shell">
+    <div class="side">
+      <header class="hero">
+        <div class="hero-sun" aria-hidden="true"><span><b>関</b><b>西</b></span></div>
+        <div class="hero-top">
+          <span class="kicker">旅のしおり<i></i>Kansai 2026</span>
+        </div>
+        <h1 class="hero-title"><span id="title-a">京都・大阪</span><small id="title-b">7日6夜自由行</small></h1>
+        <div class="hero-meta">
+          <span class="hero-dates" id="trip-dates"></span>
+          <span class="countdown" id="countdown"></span>
+          <button type="button" class="sync press" id="sync" aria-label="同步狀態"></button>
+        </div>
+      </header>
 
-  <nav class="tabs" id="tabs"></nav>
-  <main id="main"><p class="muted">載入中…</p></main>
-  <footer>網站版本：{{ site.time | date: "%Y-%m-%d %H:%M" }} (UTC)</footer>
+      <nav class="tabs" aria-label="分頁">
+        <div class="tabs-track" id="tabs" role="tablist"></div>
+      </nav>
+    </div>
 
-  <!-- 編輯表單 -->
+    <main id="main" class="main"><p class="loading">載入中</p></main>
+  </div>
+
+  <footer class="foot">旅のしおり · 版本 {{ site.time | date: "%Y.%m.%d %H:%M" }} UTC</footer>
+
+  <!-- 編輯行程 -->
   <div class="sheet" id="sheet" hidden>
+    <div class="sheet-scrim" data-close></div>
     <form class="sheet-body" id="edit-form" autocomplete="off">
+      <div class="sheet-grab" aria-hidden="true"></div>
       <div class="sheet-head">
         <b id="edit-title">編輯行程</b>
-        <button type="button" class="icon" data-close aria-label="關閉">✕</button>
+        <button type="button" class="icon-btn press" data-close data-icon="close" aria-label="關閉"></button>
       </div>
-      <label>時間<input name="time" placeholder="例如 14:30"></label>
-      <label>名稱 / 做乜 *<input name="what" required></label>
-      <div class="two">
-        <label>狀態
-          <select name="status">
-            <option value="">—</option>
-            <option value="confirmed">✅ 已確認</option>
-            <option value="pending">🟠 待處理</option>
-          </select>
-        </label>
-        <label>優先度
-          <select name="priority">
-            <option value="">—</option>
-            <option value="high">🔴 高（必去）</option>
-            <option value="mid">🔵 中</option>
-            <option value="low">⚪ 低（得閒先去）</option>
-          </select>
-        </label>
-      </div>
-      <label>地址<input name="address"></label>
-      <label>地圖搜尋字（Google Maps）<input name="place" placeholder="留空就用地址"></label>
-      <div class="two">
-        <label>電話<input name="phone" type="tel"></label>
-        <label>預約編號<input name="ref"></label>
-      </div>
-      <label>備註<textarea name="note" rows="3"></textarea></label>
-      <label>🔗 連結（一行一條；可以寫「名稱 | 網址」）<textarea name="links" rows="2" placeholder="訂位頁 | https://…&#10;https://…"></textarea></label>
-      <div class="two">
-        <label>放喺邊日<select name="day"></select></label>
-        <div class="move">
-          <span>次序</span>
-          <div>
-            <button type="button" class="btn" data-move="-1">⬆️ 上移</button>
-            <button type="button" class="btn" data-move="1">⬇️ 下移</button>
+      <div class="sheet-scroll">
+        <div class="field-row">
+          <label class="fld fld-time">時間<input name="time" placeholder="14:30" inputmode="text"></label>
+          <label class="fld">名稱 / 做乜<input name="what" required placeholder="例如：伏見稻荷大社"></label>
+        </div>
+
+        <fieldset class="seg">
+          <legend>狀態</legend>
+          <label><input type="radio" name="status" value=""><span>未定</span></label>
+          <label><input type="radio" name="status" value="confirmed"><span>已確認</span></label>
+          <label><input type="radio" name="status" value="pending"><span>待處理</span></label>
+        </fieldset>
+        <fieldset class="seg">
+          <legend>優先度</legend>
+          <label><input type="radio" name="priority" value=""><span>—</span></label>
+          <label><input type="radio" name="priority" value="high"><span>高・必去</span></label>
+          <label><input type="radio" name="priority" value="mid"><span>中</span></label>
+          <label><input type="radio" name="priority" value="low"><span>低</span></label>
+        </fieldset>
+
+        <label class="fld">地址<input name="address" placeholder="大阪市中央区…"></label>
+        <label class="fld">地圖搜尋字<input name="place" placeholder="留空就用地址"></label>
+        <div class="field-row">
+          <label class="fld">電話<input name="phone" type="tel"></label>
+          <label class="fld">預約編號<input name="ref" autocapitalize="characters"></label>
+        </div>
+        <label class="fld">備註<textarea name="note" rows="3"></textarea></label>
+        <label class="fld">連結 <em>一行一條，可以寫「名稱 | 網址」</em><textarea name="links" rows="2" placeholder="訂位頁 | https://…"></textarea></label>
+
+        <div class="field-row">
+          <label class="fld">放喺邊日<select name="day"></select></label>
+          <div class="fld">次序
+            <div class="move">
+              <button type="button" class="ghost press" data-move="-1" data-icon="up">上移</button>
+              <button type="button" class="ghost press" data-move="1" data-icon="down">下移</button>
+            </div>
           </div>
         </div>
       </div>
       <div class="sheet-actions">
-        <button type="button" class="btn danger" id="edit-delete">🗑 刪除</button>
-        <button type="submit" class="btn primary">💾 儲存</button>
+        <button type="button" class="ghost danger press" id="edit-delete" data-icon="trash">刪除</button>
+        <button type="submit" class="solid press">儲存</button>
       </div>
     </form>
   </div>
 
   <!-- 編輯當日 -->
   <div class="sheet" id="day-sheet" hidden>
+    <div class="sheet-scrim" data-close></div>
     <form class="sheet-body" id="day-form" autocomplete="off">
+      <div class="sheet-grab" aria-hidden="true"></div>
       <div class="sheet-head">
-        <b>編輯當日資料</b>
-        <button type="button" class="icon" data-close aria-label="關閉">✕</button>
+        <b>編輯當日</b>
+        <button type="button" class="icon-btn press" data-close data-icon="close" aria-label="關閉"></button>
       </div>
-      <label>當日主題<input name="title"></label>
-      <label>⚠️ 提示（留空就唔顯示）<input name="alert"></label>
+      <div class="sheet-scroll">
+        <label class="fld">當日主題<input name="title"></label>
+        <label class="fld">提示 <em>留空就唔顯示</em><input name="alert"></label>
+      </div>
       <div class="sheet-actions">
         <span></span>
-        <button type="submit" class="btn primary">💾 儲存</button>
+        <button type="submit" class="solid press">儲存</button>
       </div>
     </form>
   </div>
 
-  <!-- 相片檢視 -->
+  <!-- 相片 -->
   <div class="viewer" id="viewer" hidden>
-    <button type="button" class="close" aria-label="關閉">✕</button>
+    <div class="viewer-bg"></div>
+    <div class="viewer-bar">
+      <button type="button" class="icon-btn glass press" id="photo-delete" data-icon="trash" aria-label="刪除相片"></button>
+      <span class="caption"></span>
+      <button type="button" class="icon-btn glass press" data-close data-icon="close" aria-label="關閉"></button>
+    </div>
     <img alt="">
-    <p class="caption"></p>
-    <button type="button" class="btn danger" id="photo-delete" hidden>🗑 刪除呢張相</button>
   </div>
 
   <input type="file" id="file-input" accept="image/*,application/pdf" multiple hidden>
-  <div class="toast" id="toast" hidden></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="assets/app.js?v={{ ver }}"></script>
 </body>

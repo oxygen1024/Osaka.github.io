@@ -12,7 +12,10 @@
       "dep": "03:05",
       "to": "關西國際機場 T1",
       "arr": "07:55",
-      "status": "confirmed"
+      "status": "confirmed",
+      "from_code": "HKG",
+      "to_code": "KIX",
+      "note": "關西 Terminal 1"
     },
     {
       "label": "回程",
@@ -22,7 +25,9 @@
       "dep": "20:15",
       "to": "香港國際機場",
       "arr": "23:25",
-      "status": "confirmed"
+      "status": "confirmed",
+      "from_code": "KIX",
+      "to_code": "HKG"
     }
   ],
   "hotels": [

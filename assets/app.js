@@ -11,8 +11,12 @@
     tab: 'kansai-tab'
   };
   var WD = ['日', '一', '二', '三', '四', '五', '六'];
+  var KANJI = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
   var IMG_EXT = /\.(jpe?g|png|webp|gif|heic)$/i;
   var PDF_EXT = /\.pdf$/i;
+  var REDUCED = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var EASE_OUT = 'cubic-bezier(0.23, 1, 0.32, 1)';
+  var EASE_DRAWER = 'cubic-bezier(0.32, 0.72, 0, 1)';
 
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
@@ -26,10 +30,58 @@
     source: 'site',      // site | local | github
     photos: [],          // {path, url, sha}
     checks: {},
-    tab: null,
-    sync: ''
+    tab: null
   };
   try { state.checks = JSON.parse(lsGet(LS.checks) || '{}') || {}; } catch (e) { state.checks = {}; }
+
+  // ================= 圖示 =================
+  var ICONS = {
+    pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+    phone: '<path d="M5.2 4h3.3l1.6 4-2.1 1.4a11 11 0 0 0 6.6 6.6L16 13.9l4 1.6v3.3a1.7 1.7 0 0 1-1.8 1.7A16.2 16.2 0 0 1 3.5 5.8 1.7 1.7 0 0 1 5.2 4z"/>',
+    link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+    edit: '<path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M14.5 7.5l2 2"/>',
+    grip: '<circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    upload: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/>',
+    trash: '<path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h6.2a1.5 1.5 0 0 0 1.5-1.3L17.5 7"/>',
+    close: '<path d="M6 6l12 12M18 6L6 18"/>',
+    check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    plane: '<path d="M21 15.4v-1.7l-7.8-4.9V4.3a1.2 1.2 0 0 0-2.4 0v4.5L3 13.7v1.7l7.8-2.4v4.6l-2.1 1.5V21l3.3-1 3.3 1v-1.9l-2.1-1.5V13z"/>',
+    bed: '<path d="M3 19V6M3 15h18v4M21 15v-3a3 3 0 0 0-3-3h-7v6"/><circle cx="7" cy="11.5" r="1.6"/>',
+    train: '<rect x="5.5" y="3" width="13" height="13" rx="3"/><path d="M5.5 10h13M9 20l-1.5 2M15 20l1.5 2M9 13.2h.01M15 13.2h.01"/>',
+    bus: '<rect x="4" y="3" width="16" height="15" rx="3"/><path d="M4 11h16M8 21v-3M16 21v-3M8 14.5h.01M16 14.5h.01"/>',
+    card: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h4"/>',
+    book: '<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19"/>',
+    list: '<path d="M11 6h9M11 12h9M11 18h9"/><path d="M4 6l1.2 1.2L7.5 5M4 12l1.2 1.2L7.5 11M4 18l1.2 1.2L7.5 17"/>',
+    sliders: '<path d="M4 7h9M18 7h2M4 17h3M12 17h8"/><circle cx="15.5" cy="7" r="2.3"/><circle cx="9.5" cy="17" r="2.3"/>',
+    alert: '<path d="M12 4.5l8.5 15h-17z"/><path d="M12 10v4M12 17h.01"/>',
+    file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+    cloud: '<path d="M7 18.5a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.6 1.6 3.7 3.7 0 0 1-.5 7.4z"/>',
+    device: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+    sync: '<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4.5h-4.5"/>',
+    up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+    down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+    chevron: '<path d="M9.5 6l6 6-6 6"/>',
+    camera: '<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.3l1.4-2h5.6l1.4 2h2.3A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.5" r="3.3"/>'
+  };
+  var FILLED = { grip: 1, plane: 1 };
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+
+  function icon(name) {
+    var s = document.createElementNS(SVG_NS, 'svg');
+    s.setAttribute('viewBox', '0 0 24 24');
+    s.setAttribute('class', 'i' + (FILLED[name] ? ' fill' : ''));
+    s.setAttribute('aria-hidden', 'true');
+    s.innerHTML = ICONS[name] || '';
+    return s;
+  }
+  function checkMark() {
+    var s = document.createElementNS(SVG_NS, 'svg');
+    s.setAttribute('viewBox', '0 0 24 24');
+    s.setAttribute('aria-hidden', 'true');
+    s.innerHTML = ICONS.check;
+    return s;
+  }
 
   // ================= 小工具 =================
   function el(tag, attrs, kids) {
@@ -45,21 +97,28 @@
     });
     (kids || []).forEach(function (c) {
       if (c == null || c === false) return;
-      n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+      n.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
     });
     return n;
   }
 
+  function iconBtn(name, label, onclick, cls) {
+    return el('button', { type: 'button', class: 'icon-btn press' + (cls ? ' ' + cls : ''), 'aria-label': label, title: label, onclick: onclick }, [icon(name)]);
+  }
+
+  // 去除資料入面舊有嘅 emoji 前綴
+  function clean(s) { return String(s || '').replace(/^[←-⯿\u{1F000}-\u{1FAFF}️\s]+/u, '').trim(); }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
   var toastTimer;
-  function toast(msg, ms) {
+  function toast(msg, ms, ic) {
     var t = document.getElementById('toast');
-    t.textContent = msg;
-    t.hidden = false;
-    t.classList.remove('show');
-    void t.offsetWidth;
-    t.classList.add('show');
+    t.textContent = '';
+    if (ic) t.appendChild(icon(ic));
+    t.appendChild(el('span', { text: msg }));
+    t.setAttribute('data-show', '');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.hidden = true; }, ms || 2600);
+    toastTimer = setTimeout(function () { t.removeAttribute('data-show'); }, ms || 2600);
   }
 
   function encPath(p) { return p.split('/').map(encodeURIComponent).join('/'); }
@@ -86,13 +145,39 @@
   function ymd(d) { return d.toISOString().slice(0, 10); }
   function md(d) { return (d.getUTCMonth() + 1) + '/' + d.getUTCDate(); }
   function wd(d) { return WD[d.getUTCDay()]; }
+  function dotDate(s) { var m = /(\d{4})\D(\d{1,2})\D(\d{1,2})/.exec(s || ''); return m ? +m[2] + '.' + pad2(+m[3]) : s; }
+
+  // 日本時間（可以用 ?now=2026-10-24T13:00 測試）
+  function nowJST() {
+    var q = new URLSearchParams(location.search).get('now');
+    var m = q && /^(\d{4}-\d{2}-\d{2})(?:T(\d{1,2}):(\d{2}))?/.exec(q);
+    if (m) return { ymd: m[1], min: m[2] ? (+m[2]) * 60 + (+m[3]) : 0 };
+    var parts = {};
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(new Date()).forEach(function (p) { parts[p.type] = p.value; });
+    return { ymd: parts.year + '-' + parts.month + '-' + parts.day, min: (+parts.hour) * 60 + (+parts.minute) };
+  }
 
   function mapUrl(q) { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q); }
   function telUrl(p) { return 'tel:' + p.replace(/[^\d+]/g, ''); }
-
   function newId() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+  function isWide() { return window.matchMedia('(min-width: 1000px)').matches; }
+
+  function timeKey(t) {
+    var m = /^(\d{1,2}):(\d{2})/.exec(t || '');
+    return m ? (+m[1]) * 60 + (+m[2]) : null;
+  }
 
   // ================= GitHub API =================
+  var API_ERR = {
+    401: 'Token 無效或者已過期，請重新產生',
+    403: 'Token 冇權限：Contents 要揀「Read and write」',
+    404: '搵唔到 repo：產生 token 時要揀 Osaka.github.io 呢個 repository',
+    409: '版本衝突',
+    422: '版本衝突'
+  };
+
   function api(method, path, data) {
     return fetch('https://api.github.com/repos/' + state.repo + (path ? '/' + path : ''), {
       method: method,
@@ -115,14 +200,6 @@
     });
   }
 
-  var API_ERR = {
-    401: 'Token 無效或者已過期，請重新產生',
-    403: 'Token 冇權限：Contents 要揀「Read and write」',
-    404: '搵唔到 repo：產生 token 時要揀 Osaka.github.io 呢個 repository',
-    409: '版本衝突',
-    422: '版本衝突'
-  };
-
   function rawUrl(path) {
     return 'https://raw.githubusercontent.com/' + state.repo + '/' + encodeURIComponent(state.branch) + '/' + encPath(path);
   }
@@ -137,7 +214,7 @@
         setSync('ok');
       }).catch(function (e) {
         setSync('error');
-        toast('連接 GitHub 失敗（' + e.message + '），暫時顯示網站版本', 4000);
+        toast('連接 GitHub 失敗（' + e.message + '），暫時顯示網站版本', 4000, 'alert');
         return loadSiteTrip();
       });
     }
@@ -192,7 +269,7 @@
       lsSet(LS.draft, json);
       state.source = 'local';
       setSync('local');
-      toast('已儲存（只喺呢部手機）');
+      toast('已儲存喺呢部手機', 2200, 'device');
       return Promise.resolve(true);
     }
     setSync('saving');
@@ -206,16 +283,16 @@
         state.sha = res.content.sha;
         state.source = 'github';
         setSync('ok');
-        toast('已儲存到 GitHub ☁️');
+        toast('已同步到 GitHub', 2200, 'cloud');
         return true;
       }).catch(function (e) {
         setSync('error');
         if (e.status === 409 || e.status === 422) {
-          toast('其他裝置啱啱改過，已重新載入最新版本，請再改一次', 5000);
+          toast('其他裝置啱啱改過，已載入最新版本，請再改一次', 5000, 'alert');
           return loadTrip().then(function () { render(); return false; });
         }
         lsSet(LS.draft, json);
-        toast('儲存到 GitHub 失敗（' + e.message + '），已先存喺本機', 5000);
+        toast('同步失敗（' + e.message + '），已先存喺本機', 5000, 'alert');
         return false;
       });
     });
@@ -223,67 +300,107 @@
   }
 
   function setSync(s) {
-    state.sync = s;
     var b = document.getElementById('sync');
-    var label = {
-      ok: '☁️ 已同步',
-      saving: '⏳ 儲存中…',
-      error: '⚠️ 未同步',
-      local: '📱 只存本機'
-    }[s] || '';
-    b.textContent = label;
-    b.className = 'sync ' + s + (s === 'ok' || s === 'local' ? ' pulse' : '');
+    var m = {
+      ok: ['cloud', '已同步'],
+      saving: ['sync', '儲存中'],
+      error: ['alert', '未同步'],
+      local: ['device', '本機']
+    }[s];
+    b.textContent = '';
+    b.dataset.state = s;
+    if (!m) return;
+    b.appendChild(icon(m[0]));
+    b.appendChild(el('span', { text: m[1] }));
   }
 
   // ================= 畫面 =================
+  var firstRender = true;
   function render() {
     var t = state.trip;
-    document.getElementById('trip-title').textContent = t.title;
+    var now = nowJST();
     document.title = t.title;
-    var s = dayDate(0), e = dayDate(t.days.length - 1);
-    document.getElementById('trip-sub').textContent =
-      s.getUTCFullYear() + '/' + md(s) + '（' + wd(s) + '）– ' + md(e) + '（' + wd(e) + '）· ' + t.travellers + ' 人';
-
-    renderTabs();
+    renderHero(t, now);
+    renderTabs(now);
     var main = document.getElementById('main');
     main.textContent = '';
-    main.appendChild(renderOverview());
-    t.days.forEach(function (d, i) { main.appendChild(renderDay(d, i)); });
+    main.appendChild(renderOverview(now));
+    t.days.forEach(function (d, i) { main.appendChild(renderDay(d, i, now)); });
     main.appendChild(renderTodo());
     main.appendChild(renderSettings());
     refreshChecks();
-    show(state.tab || pickStartTab(), true);
+    show(state.tab && document.getElementById(state.tab) ? state.tab : pickStartTab(), !firstRender, true);
+    firstRender = false;
   }
 
-  function renderTabs() {
-    var nav = document.getElementById('tabs');
-    nav.textContent = '';
-    var today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo' }).format(new Date());
-    nav.appendChild(el('button', { type: 'button', dataset: { tab: 'overview' } }, ['🧳', el('small', { text: '總覽' })]));
+  function renderHero(t, now) {
+    var parts = String(t.title).split(/\s+/);
+    var a = parts.shift() || '', b = parts.join(' ');
+    var ta = document.getElementById('title-a');
+    ta.textContent = '';
+    a.split('・').forEach(function (seg, i) {
+      if (i) ta.appendChild(el('span', { class: 'dot', text: '・' }));
+      ta.appendChild(document.createTextNode(seg));
+    });
+    document.getElementById('title-b').textContent = b;
+
+    var s = dayDate(0), e = dayDate(t.days.length - 1);
+    var dates = document.getElementById('trip-dates');
+    dates.textContent = '';
+    dates.appendChild(document.createTextNode(s.getUTCFullYear() + '.' + (s.getUTCMonth() + 1) + '.' + pad2(s.getUTCDate())));
+    dates.appendChild(el('em', { text: '—' }));
+    dates.appendChild(document.createTextNode((e.getUTCMonth() + 1) + '.' + pad2(e.getUTCDate())));
+
+    var cd = document.getElementById('countdown');
+    cd.textContent = '';
+    var today = Date.parse(now.ymd + 'T00:00:00Z');
+    var diff = Math.round((s.getTime() - today) / 864e5);
+    if (diff > 0) cd.append('距離出發', el('b', { text: diff }), '日');
+    else if (-diff < t.days.length) cd.append('旅程第', el('b', { text: 1 - diff }), '日 / ' + t.days.length);
+    else cd.append('旅程完結 · おつかれさま');
+  }
+
+  function renderTabs(now) {
+    var track = document.getElementById('tabs');
+    track.textContent = '';
+    track.appendChild(el('span', { class: 'tab-ind', 'aria-hidden': 'true' }));
+    track.appendChild(tabBtn('overview', [icon('book'), el('span', { class: 'lbl', text: '總覽' })]));
     state.trip.days.forEach(function (d, i) {
       var dd = dayDate(i);
-      nav.appendChild(el('button', {
-        type: 'button',
-        class: ymd(dd) === today ? 'today' : null,
-        dataset: { tab: 'day' + (i + 1), date: ymd(dd) }
-      }, ['Day ' + (i + 1), el('small', { text: md(dd) })]));
+      var b = tabBtn('day' + (i + 1), [
+        el('span', { class: 'wd', text: '週' + wd(dd) }),
+        el('span', { class: 'n', text: dd.getUTCDate() }),
+        el('span', { class: 't', text: clean(d.title) })
+      ], 'Day ' + (i + 1) + '，' + md(dd));
+      if (ymd(dd) === now.ymd) b.classList.add('today');
+      track.appendChild(b);
     });
-    nav.appendChild(el('button', { type: 'button', dataset: { tab: 'todo' } },
-      ['✅', el('small', null, ['待辦 ', el('b', { class: 'badge', id: 'todo-count', hidden: true })])]));
-    nav.appendChild(el('button', { type: 'button', dataset: { tab: 'settings' } }, ['⚙️', el('small', { text: '設定' })]));
+    track.appendChild(el('span', { class: 'tab-sep', 'aria-hidden': 'true' }));
+    track.appendChild(tabBtn('todo', [icon('list'), el('span', { class: 'lbl', text: '待辦' }), el('b', { class: 'badge', id: 'todo-count', hidden: true })]));
+    track.appendChild(tabBtn('settings', [icon('sliders'), el('span', { class: 'lbl', text: '設定' })]));
   }
 
-  function tag(status, key) {
+  function tabBtn(id, kids, label) {
+    return el('button', { type: 'button', class: 'tab', role: 'tab', 'aria-selected': 'false', 'aria-label': label || null, dataset: { tab: id } }, kids);
+  }
+
+  function kick(n, text, extra) {
+    return el('h3', { class: 'kick' }, [el('b', { text: pad2(n) }), text, extra != null ? el('small', { text: extra }) : null]);
+  }
+
+  function tag(status, key, inputClass) {
     if (status !== 'confirmed' && status !== 'pending') return null;
     var ok = status === 'confirmed';
+    var label = ok ? '已確認' : '待處理';
     return el('label', { class: 'tag ' + (ok ? 'ok' : 'todo') }, [
-      el('input', { type: 'checkbox', dataset: { key: key } }),
-      el('span', { text: ok ? '已確認' : '待處理' })
+      el('input', { type: 'checkbox', class: inputClass || null, 'aria-label': label + '（剔選）', dataset: { key: key } }),
+      el('span', { class: 'box' }, [checkMark()]),
+      el('span', { text: label })
     ]);
   }
 
-  var PRIO = { high: ['🔴 高', 'high'], mid: ['🔵 中', 'mid'], low: ['⚪ 低', 'low'] };
-  function prioChip(p) { return PRIO[p] ? el('span', { class: 'prio ' + PRIO[p][1], text: PRIO[p][0] }) : null; }
+  var PRIO = { high: '高・必去', mid: '中', low: '低' };
+  function prioChip(p) { return PRIO[p] ? el('span', { class: 'chip ' + p }, [el('i'), PRIO[p]]) : null; }
 
   // 「名稱 | 網址」或者淨網址，一行一條；只接受 http(s)
   function parseLinks(text) {
@@ -310,7 +427,7 @@
     while ((m = re.exec(text))) {
       if (m.index > last) out.push(text.slice(last, m.index));
       var label = m[0];
-      try { var u = new URL(m[0]); label = '🔗 ' + u.hostname.replace(/^www\./, '') + (u.pathname.length > 1 ? '/…' : ''); } catch (e) {}
+      try { var u = new URL(m[0]); label = u.hostname.replace(/^www\./, '') + (u.pathname.length > 1 ? '/…' : ''); } catch (e) {}
       out.push(el('a', { class: 'inline-link', href: m[0], target: '_blank', rel: 'noopener', text: label }));
       last = m.index + m[0].length;
     }
@@ -322,182 +439,283 @@
     var ls = parseLinks(links);
     if (!place && !phone && !ls.length) return null;
     return el('div', { class: 'actions' }, [
-      place ? el('a', { class: 'btn', href: mapUrl(place), target: '_blank', rel: 'noopener', text: '📍 地圖' }) : null,
-      phone ? el('a', { class: 'btn', href: telUrl(phone), text: '📞 ' + phone }) : null
+      place ? el('a', { class: 'pill press', href: mapUrl(place), target: '_blank', rel: 'noopener' }, [icon('pin'), el('span', { text: '地圖' })]) : null,
+      phone ? el('a', { class: 'pill press', href: telUrl(phone) }, [icon('phone'), el('span', { text: phone })]) : null
     ].concat(ls.map(function (l) {
-      return el('a', { class: 'btn link', href: l.url, target: '_blank', rel: 'noopener', text: '🔗 ' + l.label });
+      return el('a', { class: 'pill link press', href: l.url, target: '_blank', rel: 'noopener' }, [icon('link'), el('span', { text: l.label })]);
     })));
   }
 
-  function renderOverview() {
-    var t = state.trip;
-    var sec = el('section', { class: 'panel', id: 'overview' }, [el('h2', { text: '行程總覽' })]);
+  function meta(name, text) {
+    return el('div', { class: 'meta' }, [icon(name), el('span', { text: text })]);
+  }
 
-    sec.appendChild(el('ol', { class: 'daylist' }, t.days.map(function (d, i) {
+  // 預約編號：撳一下複製
+  function refBtn(code) {
+    var b = el('button', { type: 'button', class: 'ref press', 'aria-label': '複製預約編號 ' + code }, [
+      el('span', { class: 'lab', text: '預約' }),
+      el('span', { class: 'code' }, [el('span', { text: code }), el('span', { class: 'done' }, [icon('check'), '已複製'])])
+    ]);
+    var t;
+    b.addEventListener('click', function () {
+      copyText(code).then(function () {
+        b.classList.add('copied');
+        buzz(8);
+        clearTimeout(t);
+        t = setTimeout(function () { b.classList.remove('copied'); }, 1600);
+      }, function () { toast('複製唔到，請長按選取', 2400, 'alert'); });
+    });
+    return b;
+  }
+  function copyText(s) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(s);
+    return new Promise(function (ok, fail) {
+      var ta = el('textarea', { readonly: true, style: 'position:fixed;opacity:0;top:0' });
+      ta.value = s;
+      body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy') ? ok() : fail(); } catch (e) { fail(); }
+      ta.remove();
+    });
+  }
+
+  function timeCol(t) {
+    var m = /^(\d{1,2}:\d{2})\s*[–\-~〜至]\s*(\d{1,2}:\d{2})$/.exec(t || '');
+    if (m) return el('div', { class: 't-time' }, [el('b', { text: m[1] }), el('small', { text: '至 ' + m[2] })]);
+    if (/^\d{1,2}:\d{2}$/.test(t || '')) return el('div', { class: 't-time' }, [el('b', { text: t })]);
+    return el('div', { class: 't-time' }, [t ? el('span', { class: 'word', text: t }) : null]);
+  }
+
+  // ---------- 總覽 ----------
+  function renderOverview(now) {
+    var t = state.trip;
+    var sec = el('section', { class: 'panel', id: 'overview', role: 'tabpanel' });
+    var k = 0, r = 0;
+    function rise(node) { if (node) { node.classList.add('rise'); node.style.setProperty('--i', Math.min(r++, 8)); } return node; }
+
+    sec.appendChild(kick(++k, '行程目錄'));
+    sec.appendChild(el('ol', { class: 'toc' }, t.days.map(function (d, i) {
       var dd = dayDate(i);
-      return el('li', null, [el('a', { href: '#day' + (i + 1) }, [
-        el('b', { text: 'Day ' + (i + 1) }),
-        el('span', { text: md(dd) + '（' + wd(dd) + '）' }),
-        d.title
-      ])]);
+      return rise(el('li', null, [el('a', { href: '#day' + (i + 1), class: ymd(dd) === now.ymd ? 'today' : null }, [
+        el('span', { class: 'n', text: pad2(i + 1) }),
+        el('span', null, [el('span', { class: 'd', text: md(dd) + ' 週' + wd(dd) }), el('span', { class: 'tt', text: clean(d.title) })]),
+        el('span', { class: 'c' }, [String(d.items.length), icon('chevron')])
+      ])]));
     })));
 
-    sec.appendChild(el('h3', { text: '✈️ 機票' }));
-    (t.flights || []).forEach(function (f) {
-      sec.appendChild(el('div', { class: 'card' + (f.status ? ' ' + f.status : '') }, [
-        el('div', { class: 'card-head' }, [el('b', { text: f.label + '・' + f.code }), tag(f.status, 'flight-' + f.code)]),
-        el('div', { class: 'muted', text: f.date }),
-        el('div', { class: 'flight' }, [
-          el('div', null, [el('strong', { text: f.dep }), el('span', { text: f.from })]),
-          el('div', { class: 'arrow', text: '→' }),
-          el('div', null, [el('strong', { text: f.arr }), el('span', { text: f.to })])
-        ])
-      ]));
-    });
+    if ((t.flights || []).length) {
+      sec.appendChild(kick(++k, '機票'));
+      t.flights.forEach(function (f) {
+        sec.appendChild(rise(el('article', { class: 'pass' }, [
+          el('div', { class: 'pass-main' }, [
+            el('div', { class: 'pass-top' }, [el('span', { text: f.label + ' · ' + f.date }), tag(f.status, 'flight-' + f.code)]),
+            el('div', { class: 'pass-route' }, [
+              el('div', { class: 'pt' }, [el('b', { text: f.from_code || '' }), el('span', { text: f.dep })]),
+              el('div', { class: 'line' }, [icon('plane')]),
+              el('div', { class: 'pt' }, [el('b', { text: f.to_code || '' }), el('span', { text: f.arr })])
+            ]),
+            el('div', { class: 'pass-names' }, [el('span', { text: f.from }), el('span', { text: f.to })])
+          ]),
+          el('div', { class: 'pass-stub' }, [el('span', null, ['航班 ', el('b', { text: f.code })]), el('span', { text: f.note || '' })])
+        ])));
+      });
+    }
 
-    sec.appendChild(el('h3', { text: '🏨 住宿' }));
-    (t.hotels || []).forEach(function (h, i) {
-      sec.appendChild(el('div', { class: 'card' + (h.status ? ' ' + h.status : '') }, [
-        el('div', { class: 'card-head' }, [el('b', { text: h.name }), tag(h.status, 'hotel-' + (i + 1))]),
-        el('div', { class: 'muted', text: h.checkin + ' 入住 → ' + h.checkout + ' 退房（' + h.nights + ' 晚）' }),
-        el('div', { class: 'field', text: '🏠 ' + h.address }),
-        actions(h.name, h.phone)
-      ]));
-    });
+    if ((t.hotels || []).length) {
+      sec.appendChild(kick(++k, '住宿'));
+      t.hotels.forEach(function (h, i) {
+        sec.appendChild(rise(el('article', { class: 'stay' }, [
+          el('div', { class: 'stay-n' }, [el('b', { text: h.nights }), el('span', { text: '晚' })]),
+          el('div', null, [
+            el('div', { class: 'stay-head' }, [
+              el('div', null, [el('h3', { text: h.name }), el('div', { class: 'stay-dates', text: dotDate(h.checkin) + ' → ' + dotDate(h.checkout) })]),
+              tag(h.status, 'hotel-' + (i + 1))
+            ]),
+            h.address ? meta('pin', h.address) : null,
+            actions(h.name, h.phone)
+          ])
+        ])));
+      });
+    }
 
-    sec.appendChild(el('h3', { text: '🚆 交通票務' }));
-    (t.transport || []).forEach(function (x, i) {
-      sec.appendChild(el('div', { class: 'card' + (x.status ? ' ' + x.status : '') }, [
-        el('div', { class: 'card-head' }, [el('b', { text: x.what }), tag(x.status, 'transport-' + (i + 1))]),
-        x.ref ? el('div', { class: 'field' }, ['🔖 預約編號：', el('code', { class: 'ref', text: x.ref })]) : null,
-        x.note ? el('div', { class: 'muted', text: x.note }) : null
-      ]));
-    });
+    if ((t.transport || []).length) {
+      sec.appendChild(kick(++k, '交通票務'));
+      sec.appendChild(rise(el('div', { class: 'rows' }, t.transport.map(function (x, i) {
+        var ic = /巴士|bus/i.test(x.what) ? 'bus' : /suica|icoca|卡/i.test(x.what) ? 'card' : 'train';
+        return el('div', { class: 'row-item' }, [
+          el('span', { class: 'row-ic' }, [icon(ic)]),
+          el('div', null, [
+            el('div', { class: 'row-head' }, [el('b', { text: x.what })]),
+            x.note ? el('div', { class: 'sub', text: x.note }) : null,
+            el('div', { class: 'chips' }, [tag(x.status, 'transport-' + (i + 1)), x.ref ? refBtn(x.ref) : null])
+          ])
+        ]);
+      }))));
+    }
 
-    sec.appendChild(el('h3', { text: '📎 預訂截圖' }));
-    (t.photo_folders || []).forEach(function (c) {
-      sec.appendChild(el('h4', { text: c.name }));
+    sec.appendChild(kick(++k, '預訂截圖'));
+    (t.photo_folders || []).forEach(function (c, i) {
+      sec.appendChild(el('h4', { class: 'sub-h', text: clean(c.name) }));
       sec.appendChild(gallery(c.folder));
     });
     return sec;
   }
 
-  function renderItem(item, di, ii) {
+  // ---------- 每日 ----------
+  function renderItem(item, di, ii, mark) {
     var place = item.place || item.address;
-    return el('li', { class: [item.status, item.priority ? 'prio-' + item.priority : ''].join(' '), dataset: { id: item.id }, style: '--i:' + Math.min(ii, 12) }, [
-      el('div', { class: 'row' }, [
-        el('button', { type: 'button', class: 'icon handle', 'aria-label': '拖拉排序', title: '按住拖拉排序', text: '⠿' }),
-        item.time ? el('time', { text: item.time }) : null,
-        prioChip(item.priority),
-        el('span', { class: 'spacer' }),
-        tag(item.status, item.id),
-        el('button', { type: 'button', class: 'icon edit', 'aria-label': '編輯', text: '✏️', onclick: function () { openEdit(di, ii); } })
-      ]),
-      el('div', { class: 'what', text: item.what }),
-      item.address ? el('div', { class: 'field', text: '🏠 ' + item.address }) : null,
-      item.ref ? el('div', { class: 'field' }, ['🔖 預約編號：', el('code', { class: 'ref', text: item.ref })]) : null,
-      item.note ? el('div', { class: 'note' }, linkify(item.note)) : null,
-      actions(place, item.phone, item.links)
+    var cls = ['item', 'rise', item.status, item.priority ? 'prio-' + item.priority : '', mark || ''].join(' ');
+    return el('li', { class: cls, dataset: { id: item.id }, style: '--i:' + Math.min(ii, 8) }, [
+      timeCol(item.time),
+      el('div', { class: 't-rail' }, [el('span', { class: 'node' })]),
+      el('article', { class: 't-card' }, [
+        el('div', { class: 't-head' }, [
+          el('h3', { class: 't-what', text: item.what }),
+          el('div', { class: 't-tools' }, [
+            iconBtn('edit', '編輯', function () { openEdit(di, ii); }),
+            el('button', { type: 'button', class: 'icon-btn handle', 'aria-label': '按住拖拉排序', title: '按住拖拉排序' }, [icon('grip')])
+          ])
+        ]),
+        el('div', { class: 'chips' }, [
+          tag(item.status, item.id),
+          mark === 'next' ? el('span', { class: 'chip next', text: '下一站' }) : mark === 'now' ? el('span', { class: 'chip now', text: '進行中' }) : null,
+          prioChip(item.priority)
+        ]),
+        item.address ? meta('pin', item.address) : null,
+        item.ref ? refBtn(item.ref) : null,
+        item.note ? el('div', { class: 'note' }, linkify(item.note)) : null,
+        actions(place, item.phone, item.links)
+      ])
     ]);
   }
 
-  function renderDay(d, i) {
+  function dayMarks(items, isToday, nowMin) {
+    var marks = [];
+    if (!isToday) return marks;
+    var cur = -1, next = -1;
+    items.forEach(function (it, i) {
+      var k = timeKey(it.time);
+      if (k == null) return;
+      if (k <= nowMin) cur = i;
+      else if (next < 0) next = i;
+    });
+    items.forEach(function (it, i) {
+      if (timeKey(it.time) == null) return;
+      if (i === next) marks[i] = 'next';
+      else if (i === cur) marks[i] = 'now';
+      else if (cur >= 0 && i < cur) marks[i] = 'past';
+    });
+    return marks;
+  }
+
+  function renderDay(d, i, now) {
     var dd = dayDate(i);
-    return el('section', { class: 'panel', id: 'day' + (i + 1) }, [
-      el('h2', null, [
-        el('span', { text: 'Day ' + (i + 1) }),
-        el('span', { class: 'date', text: dd.getUTCFullYear() + '/' + md(dd) + '（' + wd(dd) + '）' })
+    var n = i + 1;
+    var confirmed = d.items.filter(function (it) { return it.status === 'confirmed'; }).length;
+    var pending = d.items.filter(function (it) { return it.status === 'pending'; }).length;
+    var marks = dayMarks(d.items, ymd(dd) === now.ymd, now.min);
+    var stats = [el('b', { text: d.items.length }), ' 個行程'];
+    if (confirmed) stats.push(' · ', el('b', { text: confirmed }), ' 個已確認');
+    if (pending) stats.push(' · ', el('b', { text: pending }), ' 個待處理');
+
+    return el('section', { class: 'panel', id: 'day' + n, role: 'tabpanel' }, [
+      el('header', { class: 'day-head' }, [
+        el('div', { class: 'day-num' }, [el('small', { text: 'DAY' }), el('span', { text: pad2(n) })]),
+        el('div', { class: 'day-info' }, [
+          el('div', { class: 'day-date', text: (dd.getUTCMonth() + 1) + '月' + dd.getUTCDate() + '日 · 星期' + wd(dd) }),
+          el('div', { class: 'day-title' }, [el('h2', { text: clean(d.title) }), iconBtn('edit', '編輯當日主題', function () { openDayEdit(i); })]),
+          el('div', { class: 'day-stats' }, stats)
+        ]),
+        el('div', { class: 'seal', 'aria-hidden': 'true' }, ((KANJI[n] || String(n)) + '日目').split('').map(function (c) { return el('span', { text: c }); }))
       ]),
-      el('div', { class: 'dayhead' }, [
-        el('p', { class: 'daytitle', text: d.title }),
-        el('button', { type: 'button', class: 'icon edit', 'aria-label': '編輯當日', text: '✏️', onclick: function () { openDayEdit(i); } })
-      ]),
-      d.alert ? el('p', { class: 'alert', text: '⚠️ ' + d.alert }) : null,
-      el('ol', { class: 'timeline', dataset: { day: i } }, d.items.map(function (it, ii) { return renderItem(it, i, ii); })),
-      el('button', { type: 'button', class: 'btn add', text: '＋ 新增行程', onclick: function () { openEdit(i, -1); } }),
-      el('h3', { text: '📷 相片 / 文件' }),
-      gallery('day' + (i + 1))
+      d.alert ? el('p', { class: 'alert' }, [icon('alert'), el('span', { text: clean(d.alert) })]) : null,
+      el('ol', { class: 'timeline', dataset: { day: i } }, d.items.map(function (it, ii) { return renderItem(it, i, ii, marks[ii]); })),
+      el('button', { type: 'button', class: 'add press', onclick: function () { openEdit(i, -1); } }, [icon('plus'), '新增行程']),
+      kick(1, '相片・文件', String(photosIn('day' + n).length || '')),
+      gallery('day' + n)
     ]);
   }
 
+  // ---------- 待辦 ----------
   function renderTodo() {
     var list = [];
     state.trip.days.forEach(function (d, di) {
       d.items.forEach(function (it, ii) { if (it.status === 'pending') list.push({ it: it, di: di, ii: ii }); });
     });
-    return el('section', { class: 'panel', id: 'todo' }, [
-      el('h2', { text: '待辦事項' }),
-      el('p', { class: 'muted', text: '所有標咗「待處理」嘅行程都會自動列喺度。剔咗會同對應嗰日一齊剔（剔選只存喺呢部手機）。' }),
-      list.length ? el('ul', { class: 'todolist' }, list.map(function (x) {
-        return el('li', null, [
-          el('label', { class: 'tag todo' }, [
-            el('input', { type: 'checkbox', class: 'todo-box', dataset: { key: x.it.id } }),
-            el('span', { text: '待處理' })
-          ]),
-          el('span', { class: 'todo-text' }, [
+    return el('section', { class: 'panel', id: 'todo', role: 'tabpanel' }, [
+      el('div', { class: 'todo-hero' }, [el('b', { id: 'todo-big', text: list.length }), el('span', { text: '項待處理' })]),
+      el('p', { class: 'fine', text: '標咗「待處理」嘅行程會自動列喺度；喺度剔咗，當日行程都會一齊剔（只存喺呢部手機）。' }),
+      list.length ? el('ul', { class: 'todo-list' }, list.map(function (x, i) {
+        var li = el('li', { class: 'rise', style: '--i:' + i }, [
+          tag('pending', x.it.id, 'todo-box'),
+          el('div', { class: 'todo-text' }, [
             el('small', { text: 'Day ' + (x.di + 1) + (x.it.time ? ' · ' + x.it.time : '') }),
-            x.it.what
+            el('b', { text: x.it.what })
           ]),
-          el('button', { type: 'button', class: 'icon edit', 'aria-label': '編輯', text: '✏️', onclick: function () { openEdit(x.di, x.ii); } }),
-          el('a', { class: 'btn', href: '#day' + (x.di + 1), text: '→' })
+          el('div', { class: 'todo-tools' }, [
+            iconBtn('edit', '編輯', function () { openEdit(x.di, x.ii); }),
+            el('a', { class: 'icon-btn press', href: '#day' + (x.di + 1), 'aria-label': '去 Day ' + (x.di + 1) }, [icon('chevron')])
+          ])
         ]);
-      })) : el('p', { class: 'empty', text: '冇待處理事項 🎉' })
+        return li;
+      })) : el('div', { class: 'done-state' }, [el('div', { class: 'stamp', text: '完了' }), el('p', { text: '冇待處理事項，全部搞掂。' })])
     ]);
   }
 
+  // ---------- 設定 ----------
   function renderSettings() {
     var connected = !!state.token;
     var draft = lsGet(LS.draft);
-    var tokenInput = el('input', { type: 'password', placeholder: 'github_pat_…', value: state.token, autocomplete: 'off' });
-    var branchInput = el('input', { value: state.branch });
+    var tokenInput = el('input', { type: 'password', placeholder: 'github_pat_…', value: state.token, autocomplete: 'off', spellcheck: 'false' });
+    var branchInput = el('input', { value: state.branch, spellcheck: 'false', autocapitalize: 'off' });
 
-    return el('section', { class: 'panel', id: 'settings' }, [
-      el('h2', { text: '設定' }),
-
-      el('div', { class: 'card' }, [
-        el('b', { text: connected ? '☁️ 已連接 GitHub' : '📱 未連接 GitHub' }),
-        el('p', { class: 'muted', text: connected
-          ? '修改行程同上載相片會直接儲存到 GitHub，電腦同手機都會見到。'
-          : '而家修改只會存喺呢部手機，亦唔可以上載相片。連接 GitHub 之後就可以同步同上載。' }),
-        el('label', null, ['GitHub Token', tokenInput]),
-        el('label', null, ['Branch（網站用緊邊個 branch）', branchInput]),
+    return el('section', { class: 'panel', id: 'settings', role: 'tabpanel' }, [
+      el('div', { class: 'page-head' }, [el('h2', { text: '設定' }), el('p', { text: '連接 GitHub 之後，喺手機改嘅行程同上載嘅相片會同步去電腦。' })]),
+      kick(1, '同步'),
+      el('div', { class: 'card rise', style: '--i:0' }, [
+        el('div', { class: 'card-title' }, [icon(connected ? 'cloud' : 'device'), connected ? '已連接 GitHub' : '未連接 GitHub']),
+        el('p', { text: connected
+          ? '修改行程同上載相片會直接儲存到 GitHub。'
+          : '而家修改只會存喺呢部手機，亦唔可以上載相片。' }),
+        el('label', { class: 'fld' }, ['GitHub Token', tokenInput]),
+        el('label', { class: 'fld' }, ['Branch', branchInput]),
         el('div', { class: 'actions' }, [
-          el('button', { type: 'button', class: 'btn primary', text: '💾 儲存並連接', onclick: function () {
+          el('button', { type: 'button', class: 'solid press', text: '儲存並連接', onclick: function () {
             // 清走複製時夾帶嘅空格、換行或者全形字元
             state.token = tokenInput.value.replace(/[^\x21-\x7e]/g, '');
             tokenInput.value = state.token;
             state.branch = branchInput.value.trim() || body.dataset.branch || 'main';
             lsSet(LS.branch, state.branch === body.dataset.branch ? null : state.branch);
-            if (!state.token) { lsSet(LS.token, null); toast('已中斷連接'); boot(); return; }
-            toast('連接緊…', 10000);
+            if (!state.token) { lsSet(LS.token, null); toast('已中斷連接', 2200, 'device'); boot(); return; }
+            toast('連接緊…', 10000, 'sync');
             api('GET', '').then(function (r) {
               if (!r.permissions || !r.permissions.push) throw new Error(API_ERR[403]);
               lsSet(LS.token, state.token);
-              toast('連接成功 ✅');
+              toast('連接成功', 2400, 'check');
               boot();
             }).catch(function (e) {
               state.token = lsGet(LS.token) || '';
-              toast('連接失敗：' + e.message, 7000);
+              toast('連接失敗：' + e.message, 7000, 'alert');
             });
           } }),
-          connected ? el('button', { type: 'button', class: 'btn', text: '中斷連接', onclick: function () {
+          connected ? el('button', { type: 'button', class: 'ghost press', text: '中斷連接', onclick: function () {
             state.token = '';
             lsSet(LS.token, null);
-            toast('已中斷連接');
+            toast('已中斷連接', 2200, 'device');
             boot();
           } }) : null
         ])
       ]),
 
-      draft ? el('div', { class: 'card pending' }, [
-        el('b', { text: '📱 呢部手機有未上載嘅修改' }),
+      draft ? el('div', { class: 'card warn rise', style: '--i:1' }, [
+        el('div', { class: 'card-title' }, [icon('device'), '呢部手機有未上載嘅修改']),
         el('div', { class: 'actions' }, [
-          connected ? el('button', { type: 'button', class: 'btn primary', text: '⬆️ 上載本機修改到 GitHub', onclick: function () {
+          connected ? el('button', { type: 'button', class: 'solid press', text: '上載到 GitHub', onclick: function () {
             if (!confirm('用呢部手機嘅版本覆蓋 GitHub 上面嘅行程？')) return;
             state.trip = JSON.parse(draft);
             saveTrip('上載手機本機修改').then(function (ok) { if (ok) { lsSet(LS.draft, null); render(); } });
           } }) : null,
-          el('button', { type: 'button', class: 'btn danger', text: '🗑 刪除本機修改', onclick: function () {
+          el('button', { type: 'button', class: 'ghost danger press', text: '刪除本機修改', onclick: function () {
             if (!confirm('刪除呢部手機嘅修改，還原做網站版本？')) return;
             lsSet(LS.draft, null);
             boot();
@@ -505,40 +723,56 @@
         ])
       ]) : null,
 
-      el('h3', { text: '點樣攞 GitHub Token（只需做一次）' }),
+      kick(2, '點樣攞 Token'),
       el('ol', { class: 'steps' }, [
-        el('li', null, ['用瀏覽器打開 ', el('a', { href: 'https://github.com/settings/personal-access-tokens/new', target: '_blank', rel: 'noopener', text: 'GitHub → 新增 Fine-grained token' })]),
-        el('li', { text: 'Token name 隨便填，例如「關西行程」；Expiration 揀旅行完之後嘅日子' }),
-        el('li', { text: 'Repository access 揀「Only select repositories」→ 揀 ' + state.repo }),
-        el('li', { text: 'Permissions → Repository permissions → Contents 揀「Read and write」' }),
-        el('li', { text: '撳 Generate token，複製 github_pat_ 開頭嗰串字，貼落上面再撳「儲存並連接」' })
+        el('li', null, ['打開 ', el('a', { href: 'https://github.com/settings/personal-access-tokens/new', target: '_blank', rel: 'noopener', text: 'GitHub → 新增 Fine-grained token' })]),
+        el('li', { text: 'Token name 隨便填；Expiration 揀旅行完之後嘅日子' }),
+        el('li', { text: 'Repository access 揀「Only select repositories」→ ' + state.repo }),
+        el('li', { text: 'Repository permissions → Contents 揀「Read and write」' }),
+        el('li', { text: 'Generate token，複製 github_pat_ 開頭嗰串字，貼落上面' })
       ]),
-      el('p', { class: 'muted', text: '⚠️ Token 只會儲存喺呢部裝置嘅瀏覽器。唔好俾其他人睇到；唔見咗手機可以喺 GitHub 刪除個 token。' })
+      el('p', { class: 'fine', text: 'Token 只會儲存喺呢部裝置嘅瀏覽器。唔見咗手機可以喺 GitHub 刪除個 token。' })
     ]);
   }
 
   // ================= 相片 =================
+  function photosIn(folder) {
+    var prefix = 'photos/' + folder + '/';
+    return state.photos.filter(function (p) { return p.path.indexOf(prefix) === 0 && p.path.indexOf('/', prefix.length) < 0; })
+      .sort(function (a, b) { return a.path.localeCompare(b.path); });
+  }
+
   function gallery(folder) {
     var prefix = 'photos/' + folder + '/';
-    var files = state.photos.filter(function (p) { return p.path.indexOf(prefix) === 0 && p.path.indexOf('/', prefix.length) < 0; })
-      .sort(function (a, b) { return a.path.localeCompare(b.path); });
+    var files = photosIn(folder);
     var wrap = el('div', { class: 'gallery-wrap' });
-    var grid = el('div', { class: 'gallery' }, files.map(function (p) {
-      var name = p.path.slice(prefix.length).replace(/\.[^.]+$/, '');
-      var thumb = PDF_EXT.test(p.path)
-        ? el('a', { class: 'thumb pdf', href: p.url, target: '_blank', rel: 'noopener' }, [el('b', { text: '📄 PDF' }), el('span', { text: name })])
-        : el('button', { type: 'button', class: 'thumb', onclick: function () { openViewer(p, name); } }, [
-          el('img', { src: p.url, loading: 'lazy', alt: name }),
-          el('span', { text: name })
+    if (files.length) {
+      wrap.appendChild(el('div', { class: 'gallery' }, files.map(function (p) {
+        var name = p.path.slice(prefix.length).replace(/\.[^.]+$/, '').replace(/^[:：\s]+/, '');
+        var thumb;
+        if (PDF_EXT.test(p.path)) {
+          thumb = el('a', { class: 'thumb pdf press', href: p.url, target: '_blank', rel: 'noopener' }, [
+            el('span', { class: 'ph' }, [icon('file'), el('em', { text: 'PDF' })]),
+            el('span', { class: 'cap', text: name })
+          ]);
+        } else {
+          var img = el('img', { src: p.url, loading: 'lazy', decoding: 'async', alt: name, 'data-loading': '' });
+          img.addEventListener('load', function () { img.removeAttribute('data-loading'); });
+          img.addEventListener('error', function () { img.removeAttribute('data-loading'); });
+          thumb = el('button', { type: 'button', class: 'thumb press', onclick: function () { openViewer(p, name, img); } }, [
+            el('span', { class: 'ph' }, [img]),
+            el('span', { class: 'cap', text: name })
+          ]);
+        }
+        return el('div', { class: 'tile' }, [
+          thumb,
+          state.token && p.sha ? el('button', { type: 'button', class: 'tile-del press', 'aria-label': '刪除 ' + name, onclick: function () { deletePhoto(p, name); } }, [icon('trash')]) : null
         ]);
-      return el('div', { class: 'tile' }, [
-        thumb,
-        state.token && p.sha ? el('button', { type: 'button', class: 'tile-del', 'aria-label': '刪除', text: '🗑', onclick: function () { deletePhoto(p, name); } }) : null
-      ]);
-    }));
-    wrap.appendChild(grid);
-    if (!files.length) wrap.appendChild(el('p', { class: 'empty', text: '未有相片' }));
-    wrap.appendChild(el('button', { type: 'button', class: 'btn upload', text: '📤 上載相片 / PDF', onclick: function () { pickFiles(folder); } }));
+      })));
+    } else {
+      wrap.appendChild(el('p', { class: 'empty', text: '未有相片' }));
+    }
+    wrap.appendChild(el('button', { type: 'button', class: 'upload press', onclick: function () { pickFiles(folder); } }, [icon('upload'), '上載相片 / PDF']));
     return wrap;
   }
 
@@ -546,7 +780,7 @@
   var fileInput = document.getElementById('file-input');
   function pickFiles(folder) {
     if (!state.token) {
-      toast('要先喺「⚙️ 設定」連接 GitHub 先可以上載相片', 4000);
+      toast('要先喺「設定」連接 GitHub 先可以上載相片', 4000, 'alert');
       show('settings');
       return;
     }
@@ -564,7 +798,7 @@
     var done = 0;
     files.forEach(function (f, idx) {
       chain = chain.then(function () {
-        toast('上載中 ' + (idx + 1) + ' / ' + files.length + '…', 60000);
+        toast('上載中 ' + (idx + 1) + ' / ' + files.length, 60000, 'upload');
         return prepareFile(f).then(function (prep) {
           var base = prep.base;
           if (single) {
@@ -585,10 +819,10 @@
       });
     });
     chain.then(function () {
-      toast(done ? '已上載 ' + done + ' 個檔案 ✅' : '已取消');
+      toast(done ? '已上載 ' + done + ' 個檔案' : '已取消', 2400, done ? 'check' : null);
       render();
     }).catch(function (e) {
-      toast('上載失敗：' + e.message, 5000);
+      toast('上載失敗：' + e.message, 5000, 'alert');
       render();
     });
   });
@@ -634,32 +868,204 @@
     });
   }
 
-  var viewer = document.getElementById('viewer');
-  var vImg = viewer.querySelector('img');
-  var vCap = viewer.querySelector('.caption');
-  var vDel = document.getElementById('photo-delete');
-  var viewing = null;
-  function openViewer(p, name) {
-    viewing = p;
-    vImg.src = p.url;
-    vCap.textContent = name;
-    vDel.hidden = !(state.token && p.sha);
-    viewer.hidden = false;
-  }
-  function closeViewer() { viewer.hidden = true; vImg.removeAttribute('src'); viewing = null; }
-  viewer.addEventListener('click', function (e) { if (e.target === viewer || e.target.classList.contains('close')) closeViewer(); });
-  vDel.addEventListener('click', function () { if (viewing) deletePhoto(viewing, vCap.textContent); });
-
   function deletePhoto(p, name) {
     if (!confirm('確定刪除「' + name + '」？')) return;
     api('DELETE', 'contents/' + encPath(p.path), { message: '手機刪除相片 ' + p.path, sha: p.sha, branch: state.branch })
       .then(function () {
         state.photos = state.photos.filter(function (x) { return x !== p; });
-        closeViewer();
+        closeViewer(true);
         render();
-        toast('已刪除 🗑');
-      }).catch(function (e) { toast('刪除失敗：' + e.message, 4000); });
+        toast('已刪除', 2200, 'trash');
+      }).catch(function (e) { toast('刪除失敗：' + e.message, 4000, 'alert'); });
   }
+
+  // ================= 相片檢視（由縮圖放大） =================
+  var viewer = document.getElementById('viewer');
+  var vBg = viewer.querySelector('.viewer-bg');
+  var vImg = viewer.querySelector('img');
+  var vCap = viewer.querySelector('.caption');
+  var vDel = document.getElementById('photo-delete');
+  var viewing = null;
+
+  function flipFrom(fromEl, toEl) {
+    var a = fromEl.getBoundingClientRect(), b = toEl.getBoundingClientRect();
+    if (!a.width || !b.width) return null;
+    var s = Math.max(a.width / b.width, a.height / b.height);
+    return 'translate(' + ((a.left + a.width / 2) - (b.left + b.width / 2)) + 'px,' + ((a.top + a.height / 2) - (b.top + b.height / 2)) + 'px) scale(' + s + ')';
+  }
+  function visible(n) {
+    if (!n || !n.isConnected) return false;
+    var r = n.getBoundingClientRect();
+    return r.width > 0 && r.bottom > 0 && r.top < innerHeight;
+  }
+
+  function openViewer(p, name, srcImg) {
+    viewing = { p: p, src: srcImg };
+    vCap.textContent = name;
+    vDel.hidden = !(state.token && p.sha);
+    vImg.style.transform = '';
+    vImg.style.opacity = '';
+    vImg.src = p.url;
+    viewer.hidden = false;
+    body.classList.add('noscroll');
+    void viewer.offsetWidth;
+    viewer.setAttribute('data-open', '');
+    function go() {
+      if (REDUCED) { vImg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180 }); return; }
+      var from = visible(srcImg) && flipFrom(srcImg, vImg);
+      if (from) vImg.animate([{ transform: from, opacity: .5, borderRadius: '20px' }, { transform: 'none', opacity: 1, borderRadius: '6px' }], { duration: 440, easing: EASE_DRAWER });
+      else vImg.animate([{ transform: 'scale(.94)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 260, easing: EASE_OUT });
+    }
+    if (vImg.complete && vImg.naturalWidth) go();
+    else {
+      vImg.style.opacity = '0';
+      vImg.onload = function () { vImg.onload = null; vImg.style.opacity = ''; go(); };
+    }
+  }
+
+  function closeViewer(instant) {
+    if (viewer.hidden) return;
+    var v = viewing;
+    viewer.removeAttribute('data-open');
+    function end() {
+      viewer.hidden = true;
+      vImg.removeAttribute('src');
+      vImg.style.transform = '';
+      vImg.style.opacity = '';
+      vBg.style.opacity = '';
+      viewing = null;
+      if (!anySheetOpen()) body.classList.remove('noscroll');
+    }
+    if (instant || REDUCED) { end(); return; }
+    var current = vImg.style.transform || 'none';
+    var to = v && visible(v.src) && (vImg.style.transform = '', flipFrom(v.src, vImg));
+    vImg.style.transform = current === 'none' ? '' : current;
+    var anim = to
+      ? vImg.animate([{ transform: current, opacity: 1 }, { transform: to, opacity: .3 }], { duration: 300, easing: EASE_OUT, fill: 'forwards' })
+      : vImg.animate([{ transform: current, opacity: 1 }, { transform: current + ' scale(.94)', opacity: 0 }], { duration: 200, easing: EASE_OUT, fill: 'forwards' });
+    vBg.style.opacity = '';
+    anim.onfinish = function () { anim.cancel(); end(); };
+  }
+
+  viewer.addEventListener('click', function (e) {
+    if (vDrag && vDrag.moved) return;
+    if (e.target === vImg || e.target.closest('#photo-delete')) return;
+    if (e.target.closest('[data-close]') || e.target === viewer || e.target === vBg) closeViewer();
+  });
+  vDel.addEventListener('click', function () { if (viewing) deletePhoto(viewing.p, vCap.textContent); });
+
+  // 向下掃走相片
+  var vDrag = null;
+  vImg.addEventListener('pointerdown', function (e) {
+    if (vDrag) return;
+    vDrag = { y0: e.clientY, x0: e.clientX, id: e.pointerId, samples: [{ y: e.clientY, t: e.timeStamp }], moved: false };
+    try { vImg.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  vImg.addEventListener('pointermove', function (e) {
+    if (!vDrag || e.pointerId !== vDrag.id) return;
+    var dy = e.clientY - vDrag.y0, dx = e.clientX - vDrag.x0;
+    if (!vDrag.moved && Math.abs(dy) < 8) return;
+    vDrag.moved = true;
+    vDrag.dy = dy;
+    pushSample(vDrag.samples, e.clientY, e.timeStamp);
+    var down = Math.max(0, dy);
+    var s = 1 - Math.min(down, 400) / 1600;
+    vImg.style.transform = 'translate(' + dx * .4 + 'px,' + (dy < 0 ? -rubber(-dy, 400) : dy) + 'px) scale(' + s + ')';
+    vBg.style.opacity = String(.94 * (1 - Math.min(down, 360) / 480));
+  });
+  function endVDrag(e) {
+    if (!vDrag || e.pointerId !== vDrag.id) return;
+    var d = vDrag;
+    setTimeout(function () { vDrag = null; }, 0);
+    if (!d.moved) return;
+    var v = velocity(d.samples);
+    if (d.dy > 110 || v > 0.11) { closeViewer(); return; }
+    var cur = vImg.style.transform;
+    vImg.style.transform = '';
+    vBg.style.opacity = '';
+    if (!REDUCED) vImg.animate([{ transform: cur }, { transform: 'none' }], { duration: 380, easing: EASE_DRAWER });
+  }
+  vImg.addEventListener('pointerup', endVDrag);
+  vImg.addEventListener('pointercancel', endVDrag);
+
+  // ================= 物理小工具 =================
+  function rubber(over, dim) { var c = 0.55; return (over * dim * c) / (dim + c * over); }
+  function pushSample(arr, y, t) { arr.push({ y: y, t: t }); while (arr.length > 2 && t - arr[0].t > 100) arr.shift(); }
+  function velocity(arr) {
+    if (arr.length < 2) return 0;
+    var a = arr[0], b = arr[arr.length - 1];
+    return b.t > a.t ? (b.y - a.y) / (b.t - a.t) : 0;
+  }
+
+  // ================= 底部表格（可以拉落嚟關） =================
+  var sheetTimers = new WeakMap();
+  function anySheetOpen() { return !!document.querySelector('.sheet:not([hidden])'); }
+
+  function openSheet(s) {
+    clearTimeout(sheetTimers.get(s));
+    s.removeAttribute('data-closing');
+    var b = s.querySelector('.sheet-body');
+    b.style.transform = '';
+    s.querySelector('.sheet-scrim').style.opacity = '';
+    s.hidden = false;
+    body.classList.add('noscroll');
+    void s.offsetWidth;
+    s.setAttribute('data-open', '');
+    var sc = s.querySelector('.sheet-scroll');
+    if (sc) sc.scrollTop = 0;
+  }
+
+  function closeSheet(s) {
+    if (s.hidden || !s.hasAttribute('data-open')) return;
+    var b = s.querySelector('.sheet-body');
+    s.setAttribute('data-closing', '');
+    s.removeAttribute('data-open');
+    b.style.transform = '';
+    s.querySelector('.sheet-scrim').style.opacity = '';
+    sheetTimers.set(s, setTimeout(function () {
+      s.hidden = true;
+      s.removeAttribute('data-closing');
+      if (!anySheetOpen() && viewer.hidden) body.classList.remove('noscroll');
+    }, REDUCED ? 0 : 300));
+  }
+  function closeSheets() {
+    document.querySelectorAll('.sheet[data-open]').forEach(closeSheet);
+    editing = null;
+    editingDay = null;
+  }
+
+  document.querySelectorAll('.sheet').forEach(function (s) {
+    s.addEventListener('click', function (e) { if (e.target.closest('[data-close]')) closeSheets(); });
+    var b = s.querySelector('.sheet-body');
+    var scrim = s.querySelector('.sheet-scrim');
+    var sd = null;
+    b.addEventListener('pointerdown', function (e) {
+      if (!e.target.closest('.sheet-grab, .sheet-head') || e.target.closest('button') || sd) return;
+      if (window.matchMedia('(min-width: 720px)').matches) return;
+      sd = { y0: e.clientY, id: e.pointerId, h: b.offsetHeight, samples: [{ y: e.clientY, t: e.timeStamp }], dy: 0 };
+      b.style.transition = 'none';
+      try { e.target.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    b.addEventListener('pointermove', function (e) {
+      if (!sd || e.pointerId !== sd.id) return;
+      var dy = e.clientY - sd.y0;
+      sd.dy = dy;
+      pushSample(sd.samples, e.clientY, e.timeStamp);
+      b.style.transform = 'translateY(' + (dy < 0 ? -rubber(-dy, sd.h) : dy) + 'px)';
+      scrim.style.opacity = String(1 - Math.max(0, dy) / sd.h);
+    });
+    function up(e) {
+      if (!sd || e.pointerId !== sd.id) return;
+      var d = sd;
+      sd = null;
+      b.style.transition = '';
+      if (d.dy > d.h * 0.28 || velocity(d.samples) > 0.11) { closeSheets(); return; }
+      b.style.transform = '';
+      scrim.style.opacity = '';
+    }
+    b.addEventListener('pointerup', up);
+    b.addEventListener('pointercancel', up);
+  });
 
   // ================= 編輯行程 =================
   var sheet = document.getElementById('sheet');
@@ -670,38 +1076,19 @@
   function openEdit(di, ii) {
     editing = { di: di, ii: ii };
     var item = ii >= 0 ? state.trip.days[di].items[ii] : {};
-    document.getElementById('edit-title').textContent = ii >= 0 ? '編輯行程' : '新增行程（Day ' + (di + 1) + '）';
+    document.getElementById('edit-title').textContent = ii >= 0 ? '編輯行程' : '新增行程 · Day ' + (di + 1);
     var daySel = form.elements.day;
     daySel.textContent = '';
     state.trip.days.forEach(function (d, i) {
-      daySel.appendChild(el('option', { value: i, text: 'Day ' + (i + 1) + '・' + md(dayDate(i)) }));
+      daySel.appendChild(el('option', { value: i, text: 'Day ' + (i + 1) + ' · ' + md(dayDate(i)) }));
     });
     daySel.value = di;
     FIELDS.forEach(function (f) { form.elements[f].value = item[f] || ''; });
     document.getElementById('edit-delete').hidden = ii < 0;
     form.querySelectorAll('[data-move]').forEach(function (b) { b.disabled = ii < 0; });
-    sheet.hidden = false;
-    body.classList.add('noscroll');
+    openSheet(sheet);
   }
 
-  function closeSheets() {
-    document.querySelectorAll('.sheet').forEach(function (s) {
-      if (s.hidden) return;
-      if (REDUCED) { s.hidden = true; return; }
-      s.classList.add('closing');
-      setTimeout(function () { s.hidden = true; s.classList.remove('closing'); }, 200);
-    });
-    body.classList.remove('noscroll');
-    editing = null;
-  }
-  document.querySelectorAll('.sheet').forEach(function (s) {
-    s.addEventListener('click', function (e) { if (e.target === s || e.target.hasAttribute('data-close')) closeSheets(); });
-  });
-
-  function timeKey(t) {
-    var m = /^(\d{1,2}):(\d{2})/.exec(t || '');
-    return m ? (+m[1]) * 60 + (+m[2]) : null;
-  }
   function insertByTime(items, item) {
     var k = timeKey(item.time);
     if (k == null) { items.push(item); return; }
@@ -718,8 +1105,9 @@
     var days = state.trip.days;
     var old = editing.ii >= 0 ? days[editing.di].items[editing.ii] : null;
     var item = { id: old ? old.id : newId() };
-    FIELDS.forEach(function (f) { item[f] = form.elements[f].value.trim(); });
+    FIELDS.forEach(function (f) { item[f] = String(form.elements[f].value || '').trim(); });
     var target = +form.elements.day.value;
+    var fromDi = editing.di;
     if (old && target === editing.di) {
       days[editing.di].items[editing.ii] = item;
     } else {
@@ -728,6 +1116,8 @@
     }
     closeSheets();
     render();
+    if (target !== fromDi) show('day' + (target + 1));
+    markLanded(target, item.id);
     saveTrip((old ? '修改' : '新增') + '行程：Day ' + (target + 1) + ' ' + item.what);
   });
 
@@ -736,12 +1126,12 @@
       if (!editing || editing.ii < 0) return;
       var items = state.trip.days[editing.di].items;
       var to = editing.ii + (+b.dataset.move);
-      if (to < 0 || to >= items.length) { toast('已經係' + (to < 0 ? '第一' : '最後') + '項'); return; }
+      if (to < 0 || to >= items.length) { toast('已經係' + (to < 0 ? '第一' : '最後') + '項', 1800); return; }
       var tmp = items[to]; items[to] = items[editing.ii]; items[editing.ii] = tmp;
       editing.ii = to;
       render();
+      markLanded(editing.di, items[to].id);
       saveTrip('調整 Day ' + (editing.di + 1) + ' 行程次序');
-      toast('已移到第 ' + (to + 1) + ' 項');
     });
   });
 
@@ -765,8 +1155,7 @@
     editingDay = i;
     dayForm.elements.title.value = state.trip.days[i].title || '';
     dayForm.elements.alert.value = state.trip.days[i].alert || '';
-    daySheet.hidden = false;
-    body.classList.add('noscroll');
+    openSheet(daySheet);
   }
   dayForm.addEventListener('submit', function (e) {
     e.preventDefault();
@@ -775,24 +1164,41 @@
     d.title = dayForm.elements.title.value.trim();
     d.alert = dayForm.elements.alert.value.trim();
     var i = editingDay;
-    editingDay = null;
     closeSheets();
     render();
     saveTrip('修改 Day ' + (i + 1) + ' 主題');
   });
 
+  function markLanded(di, id) {
+    if (REDUCED) return;
+    var n = document.querySelector('#day' + (di + 1) + ' .item[data-id="' + id + '"]');
+    if (n) n.classList.add('landed');
+  }
+
   // ================= 分頁 =================
-  function show(id, silent) {
-    var tabs = document.querySelectorAll('#tabs button');
-    var found = false;
-    tabs.forEach(function (b) {
-      var on = b.dataset.tab === id;
-      b.classList.toggle('active', on);
-      if (on) { found = true; b.scrollIntoView({ block: 'nearest', inline: 'center' }); }
-    });
-    if (!found) return false;
+  function placeIndicator(btn, instant) {
+    var ind = document.querySelector('.tab-ind');
+    if (!ind || !btn) return;
+    if (instant) ind.style.transition = 'none';
+    ind.style.width = btn.offsetWidth + 'px';
+    ind.style.height = btn.offsetHeight + 'px';
+    ind.style.transform = 'translate(' + btn.offsetLeft + 'px,' + btn.offsetTop + 'px)';
+    if (instant) { void ind.offsetWidth; ind.style.transition = ''; }
+  }
+
+  function show(id, silent, instant) {
+    var track = document.getElementById('tabs');
+    var btn = track.querySelector('[data-tab="' + id + '"]');
+    var panel = document.getElementById(id);
+    if (!btn || !panel) return false;
+    track.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', b === btn ? 'true' : 'false'); });
+    placeIndicator(btn, instant || silent);
+    if (track.scrollWidth > track.clientWidth + 2) {
+      var left = btn.offsetLeft - (track.clientWidth - btn.offsetWidth) / 2;
+      track.scrollTo({ left: left, behavior: silent || REDUCED ? 'auto' : 'smooth' });
+    }
     document.querySelectorAll('.panel').forEach(function (p) {
-      var on = p.id === id;
+      var on = p === panel;
       p.classList.toggle('active', on);
       if (on && !silent) {
         p.classList.remove('enter');
@@ -800,16 +1206,23 @@
         p.classList.add('enter');
       }
     });
+    var changed = state.tab !== id;
     state.tab = id;
     lsSet(LS.tab, id);
-    if (!silent) window.scrollTo(0, 0);
+    if (!silent && changed) {
+      if (isWide()) window.scrollTo(0, 0);
+      else {
+        var heroH = document.querySelector('.hero').offsetHeight;
+        if (window.scrollY > heroH) window.scrollTo(0, heroH);
+      }
+    }
     return true;
   }
 
   function pickStartTab() {
     var hash = location.hash.slice(1);
     if (hash && document.getElementById(hash)) return hash;
-    var today = document.querySelector('#tabs button.today');
+    var today = document.querySelector('#tabs .tab.today');
     if (today) return today.dataset.tab;
     var saved = lsGet(LS.tab);
     if (saved && document.getElementById(saved)) return saved;
@@ -817,147 +1230,137 @@
   }
 
   document.getElementById('tabs').addEventListener('click', function (e) {
-    var b = e.target.closest('button[data-tab]');
+    var b = e.target.closest('[data-tab]');
     if (!b) return;
     show(b.dataset.tab);
     history.replaceState(null, '', '#' + b.dataset.tab);
   });
   document.getElementById('sync').addEventListener('click', function () { show('settings'); });
   window.addEventListener('hashchange', function () { show(location.hash.slice(1)); });
+  var rz;
+  window.addEventListener('resize', function () {
+    clearTimeout(rz);
+    rz = setTimeout(function () { placeIndicator(document.querySelector('.tab[aria-selected="true"]'), true); }, 60);
+  });
 
   // ================= 剔選框 =================
   function refreshChecks() {
     document.querySelectorAll('input[type=checkbox][data-key]').forEach(function (b) {
       b.checked = !!state.checks[b.dataset.key];
-      var box = b.closest('li, .card');
+      var box = b.closest('.item, .todo-list li');
       if (box) box.classList.toggle('checked', b.checked);
     });
     var left = 0;
     document.querySelectorAll('.todo-box').forEach(function (b) { if (!b.checked) left++; });
     var badge = document.getElementById('todo-count');
     if (badge) { badge.textContent = left || ''; badge.hidden = !left; }
+    var big = document.getElementById('todo-big');
+    if (big) big.textContent = left;
+    return left;
   }
+
   document.getElementById('main').addEventListener('change', function (e) {
     var b = e.target;
     if (!b.matches || !b.matches('input[type=checkbox][data-key]')) return;
     if (b.checked) state.checks[b.dataset.key] = 1; else delete state.checks[b.dataset.key];
     lsSet(LS.checks, JSON.stringify(state.checks));
-    refreshChecks();
+    var before = document.querySelectorAll('.todo-box:not(:checked)').length;
+    var left = refreshChecks();
     tickFx(b);
+    if (b.checked && b.closest('.tag.todo') && left === 0 && document.querySelectorAll('.todo-box').length && before !== left) {
+      toast('所有待辦已完成', 2600, 'check');
+    }
   });
+
+  // 剔選：標籤輕輕彈一下；完成待辦會有少少慶祝
+  function tickFx(box) {
+    var label = box.closest('.tag');
+    if (REDUCED || !label) return;
+    label.animate([{ transform: 'scale(.9)' }, { transform: 'scale(1)' }], { duration: 300, easing: EASE_OUT });
+    if (!box.checked) return;
+    buzz(10);
+    if (!label.classList.contains('todo')) return;
+    var r = label.querySelector('.box').getBoundingClientRect();
+    var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    var colors = ['var(--shu)', 'var(--yama)', 'var(--matcha)'];
+    for (var i = 0; i < 9; i++) {
+      var p = el('span', { class: 'spark' });
+      p.style.background = colors[i % 3];
+      p.style.left = (cx - 3) + 'px';
+      p.style.top = (cy - 3) + 'px';
+      body.appendChild(p);
+      var ang = (Math.PI * 2 * i) / 9 + Math.random() * .5;
+      var dist = 18 + Math.random() * 14;
+      p.animate([
+        { transform: 'translate(0,0) scale(1)', opacity: 1 },
+        { transform: 'translate(' + Math.cos(ang) * dist + 'px,' + Math.sin(ang) * dist + 'px) scale(.3)', opacity: 0 }
+      ], { duration: 520 + Math.random() * 120, easing: EASE_OUT }).onfinish = (function (n) { return function () { n.remove(); }; })(p);
+    }
+  }
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') { closeViewer(); closeSheets(); }
   });
-
-  // ================= 動畫效果 =================
-  var REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
-
-  // 撳掣水波紋
-  document.addEventListener('pointerdown', function (e) {
-    var b = e.target.closest('.btn, .icon, #tabs button, .sync, .thumb');
-    if (!b || REDUCED || b.classList.contains('handle')) return;
-    var r = b.getBoundingClientRect();
-    var size = Math.max(r.width, r.height) * 2;
-    var dot = el('span', { class: 'ripple' });
-    dot.style.width = dot.style.height = size + 'px';
-    dot.style.left = (e.clientX - r.left - size / 2) + 'px';
-    dot.style.top = (e.clientY - r.top - size / 2) + 'px';
-    b.appendChild(dot);
-    setTimeout(function () { dot.remove(); }, 600);
-  });
-
-  // 剔選：彈一彈 + 彩紙
-  var CONFETTI = ['#1e8e3e', '#34a853', '#fbbc04', '#c8102e', '#4285f4', '#ff7eb6'];
-  function tickFx(box) {
-    var label = box.closest('.tag');
-    var card = box.closest('li, .card');
-    if (REDUCED) return;
-    if (label) { label.classList.remove('pop', 'unpop'); void label.offsetWidth; label.classList.add(box.checked ? 'pop' : 'unpop'); }
-    if (!box.checked) return;
-    buzz(12);
-    if (card) { card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash'); }
-    var r = box.getBoundingClientRect();
-    var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    var colors = label && label.classList.contains('todo') ? ['#d9730d', '#fbbc04', '#ffa24d', '#c8102e'] : CONFETTI;
-    for (var i = 0; i < 14; i++) {
-      var p = el('span', { class: 'confetti' });
-      p.style.background = colors[i % colors.length];
-      p.style.left = cx + 'px';
-      p.style.top = cy + 'px';
-      document.body.appendChild(p);
-      var ang = (Math.PI * 2 * i) / 14 + Math.random() * 0.4;
-      var dist = 28 + Math.random() * 30;
-      p.animate([
-        { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
-        { transform: 'translate(' + (Math.cos(ang) * dist - 3) + 'px,' + (Math.sin(ang) * dist + 14) + 'px) rotate(' + (Math.random() * 360) + 'deg) scale(.6)', opacity: 0 }
-      ], { duration: 650 + Math.random() * 200, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = (function (n) { return function () { n.remove(); }; })(p);
-    }
-  }
 
   // ================= 拖拉排序 =================
   var drag = null;
   document.getElementById('main').addEventListener('pointerdown', function (e) {
     var h = e.target.closest('.handle');
     if (!h || drag) return;
-    var li = h.closest('li');
+    var li = h.closest('.item');
     var list = li.parentNode;
     e.preventDefault();
     var r = li.getBoundingClientRect();
-    var ph = el('li', { class: 'placeholder' });
+    var ph = el('li', { class: 'item placeholder' });
     ph.style.height = r.height + 'px';
     list.insertBefore(ph, li);
     li.classList.add('dragging');
     li.style.width = r.width + 'px';
     li.style.left = r.left + 'px';
     li.style.top = r.top + 'px';
-    drag = { li: li, list: list, ph: ph, offset: e.clientY - r.top, y: e.clientY, before: order(list), handle: h, id: e.pointerId };
+    body.classList.add('is-dragging');
+    drag = { li: li, list: list, ph: ph, offset: e.clientY - r.top, y: e.clientY, before: order(list), id: e.pointerId };
     try { h.setPointerCapture(e.pointerId); } catch (err) {}
-    buzz(15);
+    buzz(12);
     requestAnimationFrame(autoScroll);
   });
 
   function order(list) {
-    return Array.prototype.map.call(list.querySelectorAll(':scope > li[data-id]'), function (n) { return n.dataset.id; }).join(',');
+    return Array.prototype.map.call(list.querySelectorAll(':scope > .item[data-id]'), function (n) { return n.dataset.id; }).join(',');
   }
 
   function siblings() {
     return Array.prototype.filter.call(drag.list.children, function (n) { return n !== drag.li && n !== drag.ph; });
   }
 
+  // 用 layout 位置（offsetTop）判斷，唔受讓位動畫影響
   function placeAt(y) {
     var sibs = siblings();
+    var ly = y - drag.list.getBoundingClientRect().top;
     var target = null;
     for (var i = 0; i < sibs.length; i++) {
-      var r = sibs[i].getBoundingClientRect();
-      if (y < r.top + r.height / 2) { target = sibs[i]; break; }
+      if (ly < sibs[i].offsetTop + sibs[i].offsetHeight / 2) { target = sibs[i]; break; }
     }
     var cur = drag.ph.nextSibling === drag.li ? drag.li.nextSibling : drag.ph.nextSibling;
     if (cur === target) return;
     // FLIP：其他卡片順滑讓位
     var first = sibs.map(function (n) { return n.getBoundingClientRect().top; });
     if (target) drag.list.insertBefore(drag.ph, target); else drag.list.appendChild(drag.ph);
+    buzz(4);
     if (REDUCED) return;
     sibs.forEach(function (n, k) {
+      n.getAnimations().forEach(function (a) { a.cancel(); });
       var dy = first[k] - n.getBoundingClientRect().top;
       if (!dy) return;
-      n.animate([{ transform: 'translateY(' + dy + 'px)' }, { transform: 'none' }], { duration: 180, easing: 'ease-out' });
+      n.animate([{ transform: 'translateY(' + dy + 'px)' }, { transform: 'none' }], { duration: 220, easing: EASE_OUT });
     });
-  }
-
-  function moveTo(y) {
-    drag.y = y;
-    drag.li.style.top = (y - drag.offset) + 'px';
-    placeAt(y);
   }
 
   function autoScroll() {
     if (!drag) return;
-    var edge = 80, v = 0;
-    if (drag.y < edge) v = -Math.ceil((edge - drag.y) / 6);
-    else if (drag.y > innerHeight - edge) v = Math.ceil((drag.y - innerHeight + edge) / 6);
+    var edge = 90, v = 0;
+    if (drag.y < edge + 70) v = -Math.ceil((edge + 70 - drag.y) / 7);
+    else if (drag.y > innerHeight - edge) v = Math.ceil((drag.y - innerHeight + edge) / 7);
     if (v) { window.scrollBy(0, v); placeAt(drag.y); }
     requestAnimationFrame(autoScroll);
   }
@@ -965,13 +1368,16 @@
   document.addEventListener('pointermove', function (e) {
     if (!drag || e.pointerId !== drag.id) return;
     e.preventDefault();
-    moveTo(e.clientY);
+    drag.y = e.clientY;
+    drag.li.style.top = (e.clientY - drag.offset) + 'px';
+    placeAt(e.clientY);
   }, { passive: false });
 
   function endDrag(e) {
     if (!drag || (e && e.pointerId !== drag.id)) return;
     var d = drag;
     drag = null;
+    body.classList.remove('is-dragging');
     var pr = d.ph.getBoundingClientRect();
     function finish() {
       d.li.classList.remove('dragging', 'dropping');
@@ -980,25 +1386,25 @@
       d.ph.remove();
       if (order(d.list) === d.before) return;
       var di = +d.list.dataset.day;
-      var items = state.trip.days[di].items;
       var byId = {};
-      items.forEach(function (it) { byId[it.id] = it; });
+      state.trip.days[di].items.forEach(function (it) { byId[it.id] = it; });
       state.trip.days[di].items = order(d.list).split(',').map(function (id) { return byId[id]; });
       render();
-      var moved = document.querySelector('#day' + (di + 1) + ' li[data-id="' + d.li.dataset.id + '"]');
-      if (moved && !REDUCED) moved.classList.add('flash');
+      markLanded(di, d.li.dataset.id);
       saveTrip('拖拉調整 Day ' + (di + 1) + ' 行程次序');
     }
     if (REDUCED) { finish(); return; }
     d.li.classList.add('dropping');
     d.li.style.left = pr.left + 'px';
     d.li.style.top = pr.top + 'px';
-    setTimeout(finish, 190);
+    setTimeout(finish, 230);
   }
   document.addEventListener('pointerup', endDrag);
   document.addEventListener('pointercancel', endDrag);
 
   // ================= 啟動 =================
+  document.querySelectorAll('[data-icon]').forEach(function (n) { n.insertBefore(icon(n.dataset.icon), n.firstChild); });
+
   function boot() {
     return Promise.all([loadTrip(), loadPhotos()]).then(render).catch(function (e) {
       document.getElementById('main').textContent = '載入失敗：' + e.message;
