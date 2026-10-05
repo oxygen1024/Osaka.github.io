@@ -723,7 +723,10 @@
         ])
       ]) : null,
 
-      kick(2, '點樣攞 Token'),
+      kick(2, '主畫面小工具'),
+      renderWidgetCard(),
+
+      kick(3, '點樣攞 Token'),
       el('ol', { class: 'steps' }, [
         el('li', null, ['打開 ', el('a', { href: 'https://github.com/settings/personal-access-tokens/new', target: '_blank', rel: 'noopener', text: 'GitHub → 新增 Fine-grained token' })]),
         el('li', { text: 'Token name 隨便填；Expiration 揀旅行完之後嘅日子' }),
@@ -732,6 +735,57 @@
         el('li', { text: 'Generate token，複製 github_pat_ 開頭嗰串字，貼落上面' })
       ]),
       el('p', { class: 'fine', text: 'Token 只會儲存喺呢部裝置嘅瀏覽器。唔見咗手機可以喺 GitHub 刪除個 token。' })
+    ]);
+  }
+
+  // ---------- iPhone 小工具（Scriptable） ----------
+  var widgetSrc = null;
+  function loadWidgetSrc() {
+    if (widgetSrc) return Promise.resolve(widgetSrc);
+    return fetch('widget/kansai-widget.js?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (t) { widgetSrc = t; return t; });
+  }
+  var WIDGET_STYLES = [
+    ['auto', '自動：出發前倒數，旅程中顯示下一站'],
+    ['countdown', '倒數日數'],
+    ['next', '下一站（中／大尺寸列埋之後幾站）'],
+    ['today', '今日行程表'],
+    ['day1 … day7', '指定某一日'],
+    ['flight', '登機證'],
+    ['hotel', '今晚住邊度'],
+    ['todo', '待處理事項'],
+    ['week', '七日總覽']
+  ];
+  function renderWidgetCard() {
+    loadWidgetSrc().catch(function () {});
+    return el('div', { class: 'card rise', style: '--i:2' }, [
+      el('div', { class: 'card-title' }, [icon('device'), 'iPhone 主畫面 / 鎖定畫面']),
+      el('p', { text: '用免費 App「Scriptable」整 widget，自動讀取呢個網站嘅行程。' }),
+      el('ol', { class: 'steps compact' }, [
+        el('li', null, ['App Store 下載 ', el('a', { href: 'https://apps.apple.com/app/scriptable/id1405459188', target: '_blank', rel: 'noopener', text: 'Scriptable' })]),
+        el('li', { text: '撳下面「複製程式」，喺 Scriptable 撳 ＋ 開新 script，貼上，改名「旅のしおり」' }),
+        el('li', { text: '主畫面長按 → ＋ → Scriptable → 揀大細 → 加入' }),
+        el('li', { text: '長按 widget → 編輯：Script 揀「旅のしおり」，Parameter 填樣式名（留空 = auto）' })
+      ]),
+      el('div', { class: 'wstyles' }, WIDGET_STYLES.map(function (x) {
+        return el('div', { class: 'wstyle' }, [el('code', { text: x[0] }), el('span', { text: x[1] })]);
+      })),
+      el('p', { class: 'fine', text: '鎖定畫面（圓形、長方形、一行文字）都用得。喺 Scriptable 入面撳 ▶︎ 可以預覽每款樣式。' }),
+      el('div', { class: 'actions' }, [
+        el('button', { type: 'button', class: 'solid press', onclick: function (e) {
+          var btn = e.currentTarget;
+          var go = function (t) {
+            return copyText(t).then(function () { toast('已複製 widget 程式，去 Scriptable 貼上', 3000, 'check'); });
+          };
+          (widgetSrc ? go(widgetSrc) : loadWidgetSrc().then(go)).catch(function () {
+            toast('複製唔到，改為打開程式頁，請全選複製', 3500, 'alert');
+            window.open('widget/kansai-widget.js', '_blank');
+          });
+          btn.blur();
+        } }, [icon('upload'), '複製程式']),
+        el('a', { class: 'ghost press', href: 'widget/kansai-widget.js', target: '_blank', rel: 'noopener', text: '睇程式' })
+      ])
     ]);
   }
 
