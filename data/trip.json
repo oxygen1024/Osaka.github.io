@@ -145,15 +145,16 @@
         },
         {
           "id": "d1-12",
-          "time": "20:30",
+          "time": "11:30",
           "what": "坂之上商店 四條河原町店 — 牛舌晚餐",
-          "place": "坂之上商店 四條河原町店",
+          "status": "confirmed",
+          "priority": "",
           "address": "京都市中京区河原町通四条上ル米屋町388",
+          "place": "坂之上商店 四條河原町店",
           "phone": "075-746-2075",
           "ref": "SMDALMFH8R",
           "note": "用餐時限 2 小時\n取消規定：當日取消每人 ¥4,000",
-          "status": "confirmed",
-          "priority": ""
+          "links": ""
         },
         {
           "id": "d1-06",
