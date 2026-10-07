@@ -805,16 +805,9 @@
     var every = n < ft.dep - 6 * 36e5 ? 3 * 36e5 : 15 * 6e4;
     if (!force && (!inWindow || (cached && Date.now() - cached.t < every))) return Promise.resolve(cached);
     if (flightBusy[fi]) return flightBusy[fi];
-    var url = 'https://' + ADB_HOST + '/flights/number/' + encodeURIComponent(f.code) + '/' + ft.date +
+    var path = '/flights/number/' + encodeURIComponent(f.code) + '/' + ft.date +
       '?dateLocalRole=Departure&withAircraftImage=false&withLocation=false';
-    flightBusy[fi] = fetch(url, { headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': ADB_HOST }, cache: 'no-store' })
-      .then(function (r) {
-        if (r.status === 204) return [];
-        if (r.status === 401 || r.status === 403) throw new Error('API key 無效，或者未 Subscribe AeroDataBox');
-        if (r.status === 429) throw new Error('今個月免費額度用完');
-        if (!r.ok) throw new Error('航班數據錯誤 ' + r.status);
-        return r.json();
-      }, function () { throw new Error('連唔到航班數據服務'); })
+    flightBusy[fi] = adbFetch(key, path)
       .then(function (j) {
         var data = parseLive(j);
         var rec = { t: Date.now(), data: data };
@@ -827,6 +820,49 @@
       })
       .then(function (x) { delete flightBusy[fi]; updateFlights(); return x; }, function (e) { delete flightBusy[fi]; updateFlights(); throw e; });
     return flightBusy[fi];
+  }
+
+  // 同一條 key 自動試 RapidAPI 同 API.Market，記住用得嗰個
+  var ADB_PROVIDERS = {
+    rapidapi: function (key, path) {
+      return fetch('https://' + ADB_HOST + path, { headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': ADB_HOST }, cache: 'no-store' });
+    },
+    apimarket: function (key, path) {
+      return fetch('https://prod.api.market/api/v1/aedbx/aerodatabox' + path, { headers: { 'x-magicapi-key': key }, cache: 'no-store' });
+    }
+  };
+  function adbOnce(name, key, path) {
+    return ADB_PROVIDERS[name](key, path).then(function (r) {
+      if (r.status === 204) return { ok: true, json: [] };
+      return r.text().then(function (txt) {
+        var j = null;
+        try { j = JSON.parse(txt); } catch (e) {}
+        if (r.ok) return { ok: true, json: j };
+        var msg = (j && (j.message || j.error || j.detail)) || ('HTTP ' + r.status);
+        return { ok: false, status: r.status, msg: String(msg) };
+      });
+    }, function () { return { ok: false, status: 0, msg: '連唔到伺服器' }; });
+  }
+  function adbFetch(key, path) {
+    var saved = lsGet('kansai-adb-provider');
+    var order = saved === 'apimarket' ? ['apimarket', 'rapidapi'] : ['rapidapi', 'apimarket'];
+    var errors = [];
+    function attempt(i) {
+      if (i >= order.length) {
+        var auth = errors.every(function (e) { return e.status === 400 || e.status === 401 || e.status === 403; });
+        if (errors.some(function (e) { return e.status === 429; })) throw new Error('今個月免費額度用完（429）');
+        throw new Error(auth
+          ? 'Key 用唔到：RapidAPI 話「' + errors[0].msg + '」。請確認已經喺 AeroDataBox 頁撳咗 Subscribe（Basic 免費），同埋複製嘅係 X-RapidAPI-Key'
+          : '航班數據錯誤：' + errors.map(function (e) { return e.msg; }).join(' / '));
+      }
+      return adbOnce(order[i], key, path).then(function (res) {
+        if (res.ok) { lsSet('kansai-adb-provider', order[i]); return res.json; }
+        errors.push(res);
+        if (res.status === 429) return attempt(order.length);
+        return attempt(i + 1);
+      });
+    }
+    return attempt(0);
   }
 
   function flightLinks(f) {
@@ -951,6 +987,7 @@
           input.value = k;
           if (!k) { lsSet(ADB_LS, null); toast('已移除航班數據 key', 2200); render(); return; }
           lsSet(ADB_LS, k);
+          lsSet('kansai-adb-provider', null);
           toast('測試緊…', 8000, 'sync');
           var f = state.trip.flights && state.trip.flights[0];
           if (!f) return;
