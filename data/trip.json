@@ -869,5 +869,67 @@
         }
       ]
     }
+  ],
+  "expenses": [
+    {
+      "id": "imuy20hd286nz",
+      "day": -1,
+      "amt": 3879,
+      "cur": "HKD",
+      "cat": "other",
+      "pay": "card",
+      "note": "機票",
+      "t": 1791374311910
+    },
+    {
+      "id": "imuy216hod9j8",
+      "day": -1,
+      "amt": 3151,
+      "cur": "HKD",
+      "cat": "stay",
+      "pay": "card",
+      "note": "",
+      "t": 1791374344477
+    },
+    {
+      "id": "imuy21nmydpds",
+      "day": -1,
+      "amt": 113,
+      "cur": "HKD",
+      "cat": "food",
+      "pay": "card",
+      "note": "SIM CARD",
+      "t": 1791374366698
+    },
+    {
+      "id": "imuy22bsubp3l",
+      "day": -1,
+      "amt": 57.2,
+      "cur": "HKD",
+      "cat": "transport",
+      "pay": "card",
+      "note": "機場到京都",
+      "t": 1791374398014
+    },
+    {
+      "id": "imuy22xb00xwn",
+      "day": -1,
+      "amt": 329,
+      "cur": "HKD",
+      "cat": "transport",
+      "pay": "card",
+      "note": "京都來回天橋立",
+      "t": 1791374425884
+    },
+    {
+      "id": "imuy23i7h3j2q",
+      "day": -1,
+      "amt": 74.43,
+      "cur": "HKD",
+      "cat": "transport",
+      "pay": "card",
+      "note": "大阪到機場",
+      "t": 1791374452974
+    }
   ]
 }
