@@ -8,7 +8,9 @@
     branch: 'kansai-branch',
     draft: 'kansai-trip-draft',
     checks: 'kansai-checks',
-    tab: 'kansai-tab'
+    tab: 'kansai-tab',
+    tripCache: 'kansai-trip-cache',
+    photoCache: 'kansai-photo-cache'
   };
   var WD = ['日', '一', '二', '三', '四', '五', '六'];
   var KANJI = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
@@ -62,6 +64,19 @@
     up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
     down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
     chevron: '<path d="M9.5 6l6 6-6 6"/>',
+    route: '<circle cx="6" cy="18.5" r="2.2"/><circle cx="18" cy="5.5" r="2.2"/><path d="M8.2 18.5H15a3.2 3.2 0 0 0 0-6.4H9a3.2 3.2 0 0 1 0-6.4h6.8"/>',
+    nav: '<path d="M4.5 11.2L19.5 4.5l-6.7 15-1.9-6.4z"/>',
+    yen: '<path d="M6.5 4l5.5 7.5L17.5 4M12 11.5V20M8 13h8M8 16.3h8"/>',
+    download: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19.5h14"/>',
+    offline: '<path d="M3.5 3.5l17 17"/><path d="M8.6 16.2a4.8 4.8 0 0 1 6.8 0M5.2 12.8a9.6 9.6 0 0 1 3.9-2.4M14.9 10.4a9.6 9.6 0 0 1 3.9 2.4M2 9.3a14.5 14.5 0 0 1 4-2.6M10.8 5a14.5 14.5 0 0 1 11.2 4.3"/><path d="M12 20h.01"/>',
+    umbrella: '<path d="M3 12a9 9 0 0 1 18 0z"/><path d="M12 12v6.3a2 2 0 0 1-4 0M12 3v.6"/>',
+    wsun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6L6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/>',
+    wpart: '<path d="M8.5 2.8v1.4M3 8.3h1.4M4.6 4.4l1 1M12.4 4.4l-1 1"/><path d="M5.6 10.4A3.4 3.4 0 0 1 11.6 6.9"/><path d="M9 20.5a3.6 3.6 0 0 1-.5-7.2 5 5 0 0 1 9.6 1.4 2.9 2.9 0 0 1-.4 5.8z"/>',
+    wcloud: '<path d="M7 18.5a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.6 1.6 3.7 3.7 0 0 1-.5 7.4z"/>',
+    wrain: '<path d="M7 15a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.6 1.6 3.7 3.7 0 0 1-.5 7.4z"/><path d="M8.5 18l-1 2.5M12.5 18l-1 2.5M16.5 18l-1 2.5"/>',
+    wsnow: '<path d="M7 15a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.6 1.6 3.7 3.7 0 0 1-.5 7.4z"/><path d="M8 19h.01M12 20.5h.01M16 19h.01"/>',
+    wstorm: '<path d="M7 15a4.5 4.5 0 0 1-.6-9 6 6 0 0 1 11.6 1.6 3.7 3.7 0 0 1-.5 7.4z"/><path d="M12.8 15.5l-2.3 3.5h3l-2.3 3.5"/>',
+    wfog: '<path d="M7 12a4.5 4.5 0 0 1 .4-6 6 6 0 0 1 10.6 2"/><path d="M4 15h16M6 18.5h12"/>',
     camera: '<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.3l1.4-2h5.6l1.4 2h2.3A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.5" r="3.3"/>'
   };
   var FILLED = { grip: 1, plane: 1 };
@@ -158,6 +173,13 @@
     return { ymd: parts.year + '-' + parts.month + '-' + parts.day, min: (+parts.hour) * 60 + (+parts.minute) };
   }
 
+  function readJSON(k) { try { return JSON.parse(lsGet(k) || 'null'); } catch (e) { return null; } }
+  function cacheTrip() { lsSet(LS.tripCache, JSON.stringify({ sha: state.sha, trip: state.trip })); }
+  // Google Maps 路線（大眾運輸）；冇起點就由你而家位置出發
+  function dirUrl(from, to) {
+    return 'https://www.google.com/maps/dir/?api=1' + (from ? '&origin=' + encodeURIComponent(from) : '') +
+      '&destination=' + encodeURIComponent(to) + '&travelmode=transit';
+  }
   function mapUrl(q) { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q); }
   function telUrl(p) { return 'tel:' + p.replace(/[^\d+]/g, ''); }
   function newId() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -196,7 +218,9 @@
       }
       return r.status === 204 ? null : r.json();
     }, function () {
-      throw new Error('連唔到 GitHub（檢查網絡；如果 token 係複製落嚟，試吓重新貼過）');
+      var err = new Error(navigator.onLine === false ? '離線中' : '連唔到 GitHub（檢查網絡；如果 token 係複製落嚟，試吓重新貼過）');
+      err.status = 0;
+      throw err;
     });
   }
 
@@ -211,8 +235,21 @@
         state.trip = JSON.parse(b64ToUtf8(res.content));
         state.sha = res.sha;
         state.source = 'github';
+        cacheTrip();
         setSync('ok');
       }).catch(function (e) {
+        // 離線：用返上次同步落嚟嘅版本（連埋未上載嘅修改）
+        var c = readJSON(LS.tripCache);
+        var draft = lsGet(LS.draft);
+        if (c && c.trip) {
+          state.trip = c.trip;
+          state.sha = c.sha;
+          if (draft) try { state.trip = JSON.parse(draft); } catch (x) {}
+          state.source = 'cache';
+          setSync(navigator.onLine === false ? 'offline' : 'error');
+          toast(navigator.onLine === false ? '離線中，顯示上次同步嘅版本' : '連接 GitHub 失敗（' + e.message + '），顯示上次同步嘅版本', 3500, navigator.onLine === false ? 'offline' : 'alert');
+          return;
+        }
         setSync('error');
         toast('連接 GitHub 失敗（' + e.message + '），暫時顯示網站版本', 4000, 'alert');
         return loadSiteTrip();
@@ -246,7 +283,12 @@
         state.photos = res.tree.filter(function (f) {
           return f.type === 'blob' && f.path.indexOf('photos/') === 0 && (IMG_EXT.test(f.path) || PDF_EXT.test(f.path));
         }).map(function (f) { return { path: f.path, sha: f.sha, url: rawUrl(f.path) }; });
-      }).catch(function () { return loadSitePhotos(); });
+        lsSet(LS.photoCache, JSON.stringify(state.photos));
+      }).catch(function () {
+        var c = readJSON(LS.photoCache);
+        if (c && c.length) { state.photos = c; return; }
+        return loadSitePhotos();
+      });
     }
     return loadSitePhotos();
   }
@@ -282,6 +324,8 @@
       }).then(function (res) {
         state.sha = res.content.sha;
         state.source = 'github';
+        lsSet(LS.draft, null);
+        cacheTrip();
         setSync('ok');
         toast('已同步到 GitHub', 2200, 'cloud');
         return true;
@@ -292,7 +336,10 @@
           return loadTrip().then(function () { render(); return false; });
         }
         lsSet(LS.draft, json);
-        toast('同步失敗（' + e.message + '），已先存喺本機', 5000, 'alert');
+        if (navigator.onLine === false || e.status === 0) {
+          setSync('offline');
+          toast('離線中，已存喺手機，有網會自動上載', 3200, 'offline');
+        } else toast('同步失敗（' + e.message + '），已先存喺本機', 5000, 'alert');
         return false;
       });
     });
@@ -305,7 +352,8 @@
       ok: ['cloud', '已同步'],
       saving: ['sync', '儲存中'],
       error: ['alert', '未同步'],
-      local: ['device', '本機']
+      local: ['device', '本機'],
+      offline: ['offline', '離線']
     }[s];
     b.textContent = '';
     b.dataset.state = s;
@@ -327,9 +375,12 @@
     main.appendChild(renderOverview(now));
     t.days.forEach(function (d, i) { main.appendChild(renderDay(d, i, now)); });
     main.appendChild(renderTodo());
+    main.appendChild(renderMoney());
     main.appendChild(renderSettings());
     refreshChecks();
     refreshFlights();
+    fillWeather();
+    paintOffline();
     show(state.tab && document.getElementById(state.tab) ? state.tab : pickStartTab(), !firstRender, true);
     firstRender = false;
   }
@@ -378,6 +429,7 @@
     });
     track.appendChild(el('span', { class: 'tab-sep', 'aria-hidden': 'true' }));
     track.appendChild(tabBtn('todo', [icon('list'), el('span', { class: 'lbl', text: '待辦' }), el('b', { class: 'badge', id: 'todo-count', hidden: true })]));
+    track.appendChild(tabBtn('money', [icon('yen'), el('span', { class: 'lbl', text: '記帳' })]));
     track.appendChild(tabBtn('settings', [icon('sliders'), el('span', { class: 'lbl', text: '設定' })]));
   }
 
@@ -441,6 +493,7 @@
     if (!place && !phone && !ls.length) return null;
     return el('div', { class: 'actions' }, [
       place ? el('a', { class: 'pill press', href: mapUrl(place), target: '_blank', rel: 'noopener' }, [icon('pin'), el('span', { text: '地圖' })]) : null,
+      place ? el('a', { class: 'pill press', href: dirUrl('', place), target: '_blank', rel: 'noopener', 'aria-label': '由你而家位置導航去呢度' }, [icon('nav'), el('span', { text: '導航' })]) : null,
       phone ? el('a', { class: 'pill press', href: telUrl(phone) }, [icon('phone'), el('span', { text: phone })]) : null
     ].concat(ls.map(function (l) {
       return el('a', { class: 'pill link press', href: l.url, target: '_blank', rel: 'noopener' }, [icon('link'), el('span', { text: l.label })]);
@@ -504,6 +557,9 @@
       ])]));
     })));
 
+    sec.appendChild(kick(++k, '天氣'));
+    sec.appendChild(rise(el('div', { class: 'wx-week', 'aria-live': 'polite' }, [el('p', { class: 'empty', text: '載入天氣中…' })])));
+
     if ((t.flights || []).length) {
       sec.appendChild(kick(++k, '機票'));
       t.flights.forEach(function (f, fi) {
@@ -564,7 +620,7 @@
   }
 
   // ---------- 每日 ----------
-  function renderItem(item, di, ii, mark) {
+  function renderItem(item, di, ii, mark, leg) {
     var place = item.place || item.address;
     var cls = ['item', 'rise', item.status, item.priority ? 'prio-' + item.priority : '', mark || ''].join(' ');
     return el('li', { class: cls, dataset: { id: item.id }, style: '--i:' + Math.min(ii, 8) }, [
@@ -586,7 +642,13 @@
         item.address ? meta('pin', item.address) : null,
         item.ref ? refBtn(item.ref) : null,
         item.note ? el('div', { class: 'note' }, linkify(item.note)) : null,
-        actions(place, item.phone, item.links)
+        actions(place, item.phone, item.links),
+        leg ? el('a', { class: 'leg press', href: dirUrl(leg.from, leg.to), target: '_blank', rel: 'noopener', 'aria-label': '下一站 ' + leg.what + ' 嘅 Google Maps 路線' }, [
+          icon('route'),
+          el('span', { class: 'leg-k', text: '下一站' }),
+          el('span', { class: 'leg-to', text: leg.what }),
+          el('span', { class: 'leg-go' }, ['路線', icon('chevron')])
+        ]) : null
       ])
     ]);
   }
@@ -616,6 +678,7 @@
     var confirmed = d.items.filter(function (it) { return it.status === 'confirmed'; }).length;
     var pending = d.items.filter(function (it) { return it.status === 'pending'; }).length;
     var marks = dayMarks(d.items, ymd(dd) === now.ymd, now.min);
+    var legs = dayLegs(d.items, i);
     var stats = [el('b', { text: d.items.length }), ' 個行程'];
     if (confirmed) stats.push(' · ', el('b', { text: confirmed }), ' 個已確認');
     if (pending) stats.push(' · ', el('b', { text: pending }), ' 個待處理');
@@ -630,8 +693,9 @@
         ]),
         el('div', { class: 'seal', 'aria-hidden': 'true' }, ((KANJI[n] || String(n)) + '日目').split('').map(function (c) { return el('span', { text: c }); }))
       ]),
+      el('div', { class: 'wx', dataset: { day: i }, hidden: true }),
       d.alert ? el('p', { class: 'alert' }, [icon('alert'), el('span', { text: clean(d.alert) })]) : null,
-      el('ol', { class: 'timeline', dataset: { day: i } }, d.items.map(function (it, ii) { return renderItem(it, i, ii, marks[ii]); })),
+      el('ol', { class: 'timeline', dataset: { day: i } }, d.items.map(function (it, ii) { return renderItem(it, i, ii, marks[ii], legs[ii]); })),
       el('button', { type: 'button', class: 'add press', onclick: function () { openEdit(i, -1); } }, [icon('plus'), '新增行程']),
       kick(1, '相片・文件', String(photosIn('day' + n).length || '')),
       gallery('day' + n)
@@ -725,13 +789,16 @@
         ])
       ]) : null,
 
-      kick(2, '航班即時數據'),
+      kick(2, '離線模式'),
+      renderOfflineCard(),
+
+      kick(3, '航班即時數據'),
       renderFlightKeyCard(),
 
-      kick(3, '主畫面小工具'),
+      kick(4, '主畫面小工具'),
       renderWidgetCard(),
 
-      kick(4, '點樣攞 Token'),
+      kick(5, '點樣攞 Token'),
       el('ol', { class: 'steps' }, [
         el('li', null, ['打開 ', el('a', { href: 'https://github.com/settings/personal-access-tokens/new', target: '_blank', rel: 'noopener', text: 'GitHub → 新增 Fine-grained token' })]),
         el('li', { text: 'Token name 隨便填；Expiration 揀旅行完之後嘅日子' }),
@@ -1105,6 +1172,490 @@
         el('a', { class: 'ghost press', href: 'widget/kansai-widget.js', target: '_blank', rel: 'noopener', text: '睇程式' })
       ])
     ]);
+  }
+
+  // ================= 交通指引：下一站 =================
+  // 當晚住邊間酒店（入住日 ≤ 當日 < 退房日；最後一日就用退房嗰間）
+  function hotelFor(di) {
+    var d = ymd(dayDate(di)), hs = state.trip.hotels || [], hit = null;
+    hs.forEach(function (h) {
+      var ci = String(h.checkin || '').replace(/\//g, '-'), co = String(h.checkout || '').replace(/\//g, '-');
+      if (ci <= d && d < co) hit = h;
+    });
+    if (!hit) hs.forEach(function (h) { if (String(h.checkout || '').replace(/\//g, '-') === d) hit = h; });
+    return hit;
+  }
+  function placeOf(it, di) {
+    var p = it.place || it.address;
+    if (p) return p;
+    if (/酒店|hotel|check.?in|寄存行李/i.test(it.what)) { var h = hotelFor(di); if (h) return h.name; }
+    return '';
+  }
+  // 冇地點嘅行程（例如剪髮、搭車）當係仲喺上一個地方
+  function dayLegs(items, di) {
+    var eff = [], last = '';
+    items.forEach(function (it, i) { var p = placeOf(it, di); if (p) last = p; eff[i] = last; });
+    var legs = [];
+    items.forEach(function (it, i) {
+      var nx = items[i + 1];
+      if (!nx) return;
+      var to = placeOf(nx, di);
+      if (to && to !== eff[i]) legs[i] = { from: eff[i], to: to, what: nx.what };
+    });
+    return legs;
+  }
+
+  // ================= 天氣（Open-Meteo，免 key）=================
+  var CITIES = {
+    kyoto: { name: '京都', lat: 35.0037, lon: 135.7588, re: /京都|嵐山|祇園|河原町|二条|伏見|kyoto/i },
+    osaka: { name: '大阪', lat: 34.6723, lon: 135.5013, re: /大阪|梅田|心斎橋|心齋橋|難波|なんば|osaka|關西機場|関西空港|返回香港/i },
+    miyazu: { name: '天橋立', lat: 35.5694, lon: 135.1906, re: /天橋立|宮津|丹後|伊根/ },
+    minoh: { name: '箕面', lat: 34.8269, lon: 135.4705, re: /箕面|吹田|万博/ }
+  };
+  var CITY_KEYS = Object.keys(CITIES);
+  var WX_LS = 'kansai-wx', WX_PAST_LS = 'kansai-wx-past';
+  var WX_TTL = 2 * 3600e3;
+
+  function dayCities(di) {
+    var title = String(state.trip.days[di].title || ''), found = [];
+    CITY_KEYS.forEach(function (k) {
+      var m = CITIES[k].re.exec(title);
+      if (m) found.push({ k: k, at: m.index });
+    });
+    found.sort(function (a, b) { return a.at - b.at; });
+    var keys = found.map(function (f) { return f.k; }).slice(0, 2);
+    if (!keys.length) {
+      var h = hotelFor(di);
+      var hk = h && CITY_KEYS.filter(function (k) { return CITIES[k].re.test(h.name + ' ' + h.address); })[0];
+      keys = [hk || 'osaka'];
+    }
+    return keys;
+  }
+
+  // WMO weather code → [圖示, 描述]
+  function wxCode(c) {
+    if (c === 0) return ['wsun', '晴'];
+    if (c === 1) return ['wsun', '大致天晴'];
+    if (c === 2) return ['wpart', '間中有雲'];
+    if (c === 3) return ['wcloud', '陰天'];
+    if (c === 45 || c === 48) return ['wfog', '有霧'];
+    if (c >= 51 && c <= 57) return ['wrain', '毛毛雨'];
+    if (c === 61) return ['wrain', '小雨'];
+    if (c === 63) return ['wrain', '有雨'];
+    if (c >= 64 && c <= 67) return ['wrain', '大雨'];
+    if (c >= 71 && c <= 77) return ['wsnow', '落雪'];
+    if (c >= 80 && c <= 82) return ['wrain', '驟雨'];
+    if (c === 85 || c === 86) return ['wsnow', '陣雪'];
+    if (c >= 95) return ['wstorm', '雷暴'];
+    return ['wcloud', '—'];
+  }
+
+  function wxQuery(base, extra) {
+    var ks = CITY_KEYS;
+    return base + '?latitude=' + ks.map(function (k) { return CITIES[k].lat; }).join(',') +
+      '&longitude=' + ks.map(function (k) { return CITIES[k].lon; }).join(',') +
+      '&timezone=Asia%2FTokyo' + extra;
+  }
+  // 將 Open-Meteo（單點或者多點）結果變成 {city: {date: {...}}}
+  function wxIndex(json, hourly) {
+    var arr = Array.isArray(json) ? json : [json], out = {};
+    arr.forEach(function (r, ci) {
+      var k = CITY_KEYS[ci], dmap = {};
+      if (!r || !r.daily) return;
+      r.daily.time.forEach(function (d, i) {
+        dmap[d] = {
+          code: r.daily.weather_code[i],
+          hi: r.daily.temperature_2m_max[i],
+          lo: r.daily.temperature_2m_min[i],
+          pop: r.daily.precipitation_probability_max ? r.daily.precipitation_probability_max[i] : null,
+          rain: r.daily.precipitation_sum ? r.daily.precipitation_sum[i] : null,
+          hours: []
+        };
+      });
+      if (hourly && r.hourly) r.hourly.time.forEach(function (t, i) {
+        var d = t.slice(0, 10), h = +t.slice(11, 13);
+        if (dmap[d] && h >= 9 && h <= 21 && h % 3 === 0) dmap[d].hours.push({ h: h, temp: r.hourly.temperature_2m[i], pop: r.hourly.precipitation_probability[i], code: r.hourly.weather_code[i] });
+      });
+      out[k] = dmap;
+    });
+    return out;
+  }
+
+  var wx = { now: null, past: null, busy: false };
+  function loadWeather(force) {
+    var c = readJSON(WX_LS), p = readJSON(WX_PAST_LS);
+    if (c) wx.now = c;
+    if (p) wx.past = p.data;
+    var jobs = [];
+    if (navigator.onLine !== false && (force || !c || Date.now() - c.t > WX_TTL)) {
+      jobs.push(fetch(wxQuery('https://api.open-meteo.com/v1/forecast',
+        '&forecast_days=16&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&hourly=temperature_2m,precipitation_probability,weather_code'))
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (j) { wx.now = { t: Date.now(), data: wxIndex(j, true) }; lsSet(WX_LS, JSON.stringify(wx.now)); }));
+    }
+    // 預報最多 16 日；未出預報嗰幾日用去年同期做參考
+    var s = state.trip.start_date, e = state.trip.end_date;
+    var ps = (+s.slice(0, 4) - 1) + s.slice(4), pe = (+e.slice(0, 4) - 1) + e.slice(4);
+    if (navigator.onLine !== false && (!p || p.range !== ps + pe)) {
+      jobs.push(fetch(wxQuery('https://archive-api.open-meteo.com/v1/archive',
+        '&start_date=' + ps + '&end_date=' + pe + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum'))
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (j) { wx.past = wxIndex(j, false); lsSet(WX_PAST_LS, JSON.stringify({ range: ps + pe, data: wx.past })); }));
+    }
+    return Promise.all(jobs.map(function (j) { return j.catch(function () {}); }));
+  }
+
+  function wxFor(k, date) {
+    var n = wx.now && wx.now.data[k] && wx.now.data[k][date];
+    if (n) return { f: n, live: true };
+    var py = (+date.slice(0, 4) - 1) + date.slice(4);
+    var p = wx.past && wx.past[k] && wx.past[k][py];
+    return p ? { f: p, live: false } : null;
+  }
+  function deg(v) { return v == null ? '–' : Math.round(v) + '°'; }
+
+  function fillWeather(force) {
+    paintWeather();
+    if (wx.busy) return;
+    wx.busy = true;
+    loadWeather(force).then(function () { wx.busy = false; paintWeather(); });
+  }
+
+  function paintWeather() {
+    if (!state.trip) return;
+    var days = state.trip.days;
+    document.querySelectorAll('.wx[data-day]').forEach(function (box) {
+      var di = +box.dataset.day, date = ymd(dayDate(di));
+      box.textContent = '';
+      var any = false, wet = false, ref = false;
+      dayCities(di).forEach(function (k) {
+        var w = wxFor(k, date);
+        if (!w) return;
+        any = true;
+        var f = w.f, c = wxCode(f.code);
+        if (!w.live) ref = true;
+        if (w.live && f.pop != null && f.pop >= 50) wet = true;
+        box.appendChild(el('div', { class: 'wx-row' + (w.live ? '' : ' ref') }, [
+          el('span', { class: 'wx-ic' }, [icon(c[0])]),
+          el('div', { class: 'wx-main' }, [
+            el('b', { text: CITIES[k].name }),
+            el('span', { text: (w.live ? '' : '去年同日 · ') + c[1] })
+          ]),
+          el('div', { class: 'wx-temp' }, [el('b', { text: deg(f.hi) }), el('span', { text: deg(f.lo) })]),
+          w.live && f.pop != null ? el('div', { class: 'wx-pop' + (f.pop >= 50 ? ' wet' : '') }, [icon('umbrella'), f.pop + '%'])
+            : (!w.live && f.rain != null ? el('div', { class: 'wx-pop' }, [icon('umbrella'), f.rain.toFixed(1) + 'mm']) : null)
+        ]));
+        if (w.live && f.hours.length && k === dayCities(di)[0]) {
+          box.appendChild(el('div', { class: 'wx-hours' }, f.hours.map(function (h) {
+            return el('div', { class: 'wx-h' + (h.pop >= 50 ? ' wet' : '') }, [
+              el('small', { text: h.h + ':00' }), icon(wxCode(h.code)[0]), el('b', { text: deg(h.temp) }), el('em', { text: h.pop + '%' })
+            ]);
+          })));
+        }
+      });
+      if (any) {
+        box.appendChild(el('p', { class: 'wx-foot' }, [
+          wet ? el('span', { class: 'wx-tip' }, [icon('umbrella'), '可能落雨，記得帶遮']) : null,
+          el('span', { text: ref ? '預報出發前 16 日先有，而家顯示去年同日作參考' : '天氣：Open-Meteo' })
+        ]));
+      }
+      box.hidden = !any;
+    });
+
+    var week = document.querySelector('.wx-week');
+    if (!week) return;
+    week.textContent = '';
+    var cells = days.map(function (d, di) {
+      var k = dayCities(di)[0], date = ymd(dayDate(di)), w = wxFor(k, date), dd = dayDate(di);
+      return el('a', { class: 'wx-cell press' + (w && !w.live ? ' ref' : ''), href: '#day' + (di + 1) }, [
+        el('small', { text: md(dd) + ' ' + wd(dd) }),
+        el('span', { class: 'wx-city', text: CITIES[k].name }),
+        icon(w ? wxCode(w.f.code)[0] : 'wcloud'),
+        el('b', { text: w ? deg(w.f.hi) : '–' }),
+        el('span', { class: 'lo', text: w ? deg(w.f.lo) : '' }),
+        w && w.live && w.f.pop != null ? el('em', { class: w.f.pop >= 50 ? 'wet' : null, text: w.f.pop + '%' }) : el('em', { text: w ? '去年' : '' })
+      ]);
+    });
+    week.appendChild(el('div', { class: 'wx-grid' }, cells));
+    var hasLive = days.some(function (d, di) { var w = wxFor(dayCities(di)[0], ymd(dayDate(di))); return w && w.live; });
+    var hasAny = days.some(function (d, di) { return !!wxFor(dayCities(di)[0], ymd(dayDate(di))); });
+    week.appendChild(el('p', { class: 'fine', text: !hasAny ? (navigator.onLine === false ? '離線中，未有天氣資料' : '載入天氣中…')
+      : (hasLive ? '最高 / 最低溫，% 係降雨機會。' : '') + (days.every(function (d, di) { var w = wxFor(dayCities(di)[0], ymd(dayDate(di))); return w && w.live; }) ? '' : '淡色係去年同日嘅天氣，預報出發前 16 日先有。') }));
+  }
+  setInterval(function () { if (!document.hidden && state.trip) fillWeather(); }, 30 * 60e3);
+
+  // ================= 記帳 =================
+  var FX_LS = 'kansai-fx', FX_MANUAL = 'kansai-fx-manual';
+  var FX_DEFAULT = 19.2;   // 1 HKD = ¥19.2（後備）
+  var CATS = [
+    { k: 'food', name: '餐飲' }, { k: 'transport', name: '交通' }, { k: 'shop', name: '購物' },
+    { k: 'ticket', name: '門票' }, { k: 'stay', name: '住宿' }, { k: 'other', name: '其他' }
+  ];
+  var PAYS = [{ k: 'cash', name: '現金' }, { k: 'card', name: '信用卡' }, { k: 'ic', name: 'Suica' }];
+  var moneyEdit = null;
+
+  function catName(k) { var c = CATS.filter(function (x) { return x.k === k; })[0]; return c ? c.name : '其他'; }
+  function payName(k) { var c = PAYS.filter(function (x) { return x.k === k; })[0]; return c ? c.name : ''; }
+  function fxRate() {
+    var m = parseFloat(lsGet(FX_MANUAL));
+    if (m > 0) return m;
+    var c = readJSON(FX_LS);
+    return c && c.rate > 0 ? c.rate : FX_DEFAULT;
+  }
+  function loadFx() {
+    var c = readJSON(FX_LS);
+    if (navigator.onLine === false || (c && Date.now() - c.t < 12 * 3600e3)) return Promise.resolve(false);
+    return fetch('https://open.er-api.com/v6/latest/HKD').then(function (r) { return r.json(); }).then(function (j) {
+      if (j && j.rates && j.rates.JPY > 0) { lsSet(FX_LS, JSON.stringify({ rate: j.rates.JPY, t: Date.now() })); return true; }
+      return false;
+    }).catch(function () { return false; });
+  }
+  function toJPY(e) { return e.cur === 'HKD' ? e.amt * fxRate() : e.amt; }
+  function fmt(n) { return Math.round(n).toLocaleString('en-US'); }
+  function hkd(jpy) { return 'HK$' + (jpy / fxRate()).toLocaleString('en-US', { maximumFractionDigits: jpy / fxRate() < 100 ? 1 : 0 }); }
+  function moneyDayName(d) { return d < 0 ? '出發前' : 'Day ' + (d + 1) + ' · ' + md(dayDate(d)); }
+  function defaultMoneyDay() {
+    var now = nowJST(), t = state.trip;
+    for (var i = 0; i < t.days.length; i++) if (ymd(dayDate(i)) === now.ymd) return i;
+    return now.ymd < t.start_date ? -1 : t.days.length - 1;
+  }
+
+  function segGroup(name, opts, val, legend) {
+    return el('fieldset', { class: 'seg' }, [el('legend', { text: legend })].concat(opts.map(function (o) {
+      var inp = el('input', { type: 'radio', name: name, value: o.k });
+      if (o.k === val) inp.checked = true;
+      return el('label', { class: name === 'cat' ? 'cat-' + o.k : null }, [inp, el('span', { text: o.name })]);
+    })));
+  }
+
+  function renderMoney() {
+    var t = state.trip;
+    var list = t.expenses || [];
+    var total = list.reduce(function (s, e) { return s + toJPY(e); }, 0);
+    var budget = +t.budget || 0;
+    var editing = moneyEdit && list.filter(function (e) { return e.id === moneyEdit; })[0];
+    var cur = editing || { day: defaultMoneyDay(), cur: lsGet('kansai-last-cur') || 'JPY', cat: 'food', pay: lsGet('kansai-last-pay') || 'cash', amt: '', note: '' };
+
+    var amt = el('input', { name: 'amt', inputmode: 'decimal', placeholder: '0', autocomplete: 'off', 'aria-label': '金額', value: cur.amt === '' ? '' : String(cur.amt) });
+    var conv = el('span', { class: 'm-conv' });
+    var daySel = el('select', { name: 'day' }, [el('option', { value: '-1', text: '出發前' })].concat(t.days.map(function (d, i) {
+      return el('option', { value: String(i), text: 'Day ' + (i + 1) + ' · ' + md(dayDate(i)) + ' ' + clean(d.title) });
+    })));
+    daySel.value = String(cur.day);
+    var form = el('form', { class: 'card m-form' + (editing ? ' editing' : ''), autocomplete: 'off' }, [
+      el('div', { class: 'm-amt' }, [
+        el('span', { class: 'm-sym', text: cur.cur === 'HKD' ? 'HK$' : '¥' }),
+        amt
+      ]),
+      conv,
+      segGroup('cur', [{ k: 'JPY', name: '日圓 ¥' }, { k: 'HKD', name: '港幣 HK$' }], cur.cur, '貨幣'),
+      segGroup('cat', CATS, cur.cat, '分類'),
+      segGroup('pay', PAYS, cur.pay, '付款方式'),
+      el('div', { class: 'field-row' }, [
+        el('label', { class: 'fld' }, ['備註', el('input', { name: 'note', placeholder: '例如：一蘭拉麵', value: cur.note || '' })]),
+        el('label', { class: 'fld' }, ['日子', daySel])
+      ]),
+      el('div', { class: 'actions' }, [
+        el('button', { type: 'submit', class: 'solid press' }, [icon(editing ? 'check' : 'plus'), editing ? '更新' : '記低']),
+        editing ? el('button', { type: 'button', class: 'ghost press', text: '取消', onclick: function () { moneyEdit = null; render(); } }) : null,
+        editing ? el('button', { type: 'button', class: 'ghost danger press', onclick: function () { delExpense(editing); } }, [icon('trash'), '刪除']) : null
+      ])
+    ]);
+    function syncConv() {
+      var v = parseFloat(String(amt.value).replace(/,/g, ''));
+      var c = form.elements.cur.value;
+      form.querySelector('.m-sym').textContent = c === 'HKD' ? 'HK$' : '¥';
+      conv.textContent = v > 0 ? (c === 'HKD' ? '≈ ¥' + fmt(v * fxRate()) : '≈ ' + hkd(v)) : '';
+    }
+    amt.addEventListener('input', syncConv);
+    form.addEventListener('change', syncConv);
+    syncConv();
+    form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var v = parseFloat(String(amt.value).replace(/,/g, ''));
+      if (!(v > 0)) { amt.focus(); toast('請輸入金額', 1800, 'alert'); return; }
+      var rec = {
+        id: editing ? editing.id : newId(),
+        day: +daySel.value,
+        amt: Math.round(v * 100) / 100,
+        cur: form.elements.cur.value,
+        cat: form.elements.cat.value || 'other',
+        pay: form.elements.pay.value || '',
+        note: form.elements.note.value.trim(),
+        t: editing ? editing.t : Date.now()
+      };
+      lsSet('kansai-last-cur', rec.cur);
+      lsSet('kansai-last-pay', rec.pay);
+      t.expenses = t.expenses || [];
+      if (editing) t.expenses = t.expenses.map(function (e) { return e.id === rec.id ? rec : e; });
+      else t.expenses.push(rec);
+      moneyEdit = null;
+      buzz(10);
+      render();
+      var row = document.querySelector('.m-row[data-id="' + rec.id + '"]');
+      if (row && !REDUCED) row.animate([{ background: 'var(--shu-soft)' }, { background: 'transparent' }], { duration: 900, easing: EASE_OUT });
+      saveTrip('記帳：' + (rec.note || catName(rec.cat)) + ' ' + (rec.cur === 'HKD' ? 'HK$' : '¥') + rec.amt);
+    });
+
+    // 分類
+    var byCat = {};
+    list.forEach(function (e) { byCat[e.cat] = (byCat[e.cat] || 0) + toJPY(e); });
+    var catRows = CATS.filter(function (c) { return byCat[c.k]; }).sort(function (a, b) { return byCat[b.k] - byCat[a.k]; });
+
+    // 明細（按日，新嘅喺上面）
+    var groups = {};
+    list.forEach(function (e) { (groups[e.day] = groups[e.day] || []).push(e); });
+    var dayKeys = Object.keys(groups).map(Number).sort(function (a, b) { return b - a; });
+
+    var fx = readJSON(FX_LS), manual = parseFloat(lsGet(FX_MANUAL)) > 0;
+    var fxInput = el('input', { inputmode: 'decimal', placeholder: String((fx && fx.rate) ? fx.rate.toFixed(2) : FX_DEFAULT), value: manual ? lsGet(FX_MANUAL) : '' });
+    var budgetInput = el('input', { inputmode: 'numeric', placeholder: '例如 150000', value: budget ? String(budget) : '' });
+
+    var r = 0;
+    function rise(node) { node.classList.add('rise'); node.style.setProperty('--i', Math.min(r++, 8)); return node; }
+    var used = budget ? total / budget : 0;
+    var daysWithSpend = dayKeys.filter(function (d) { return d >= 0; }).length;
+
+    return el('section', { class: 'panel', id: 'money', role: 'tabpanel' }, [
+      el('div', { class: 'm-hero' }, [
+        el('small', { text: '總支出' }),
+        el('div', { class: 'm-total' }, [el('span', { text: '¥' }), el('b', { text: fmt(total) })]),
+        el('div', { class: 'm-sub' }, [
+          el('span', { text: '≈ ' + hkd(total) }),
+          daysWithSpend ? el('span', { text: '旅程中每日平均 ¥' + fmt(list.filter(function (e) { return e.day >= 0; }).reduce(function (s, e) { return s + toJPY(e); }, 0) / daysWithSpend) }) : null
+        ]),
+        budget ? el('div', { class: 'm-budget' + (used > 1 ? ' over' : used > .85 ? ' near' : '') }, [
+          el('div', { class: 'm-bar' }, [el('i', { style: 'transform:scaleX(' + Math.min(used, 1).toFixed(4) + ')' })]),
+          el('div', { class: 'm-bud-t' }, [
+            el('span', { text: '預算 ¥' + fmt(budget) }),
+            el('b', { text: used > 1 ? '超支 ¥' + fmt(total - budget) : '剩 ¥' + fmt(budget - total) + '（' + hkd(budget - total) + '）' })
+          ])
+        ]) : null
+      ]),
+
+      kick(1, editing ? '修改紀錄' : '記一筆'),
+      rise(form),
+
+      catRows.length ? kick(2, '分類') : null,
+      catRows.length ? rise(el('div', { class: 'card m-cats' }, catRows.map(function (c) {
+        var v = byCat[c.k];
+        return el('div', { class: 'm-cat cat-' + c.k }, [
+          el('span', { class: 'm-cat-n' }, [el('i'), c.name]),
+          el('div', { class: 'm-bar' }, [el('i', { style: 'transform:scaleX(' + (v / total).toFixed(4) + ')' })]),
+          el('b', { text: '¥' + fmt(v) }),
+          el('small', { text: Math.round(v / total * 100) + '%' })
+        ]);
+      }))) : null,
+
+      kick(catRows.length ? 3 : 2, '明細', list.length ? list.length + ' 筆' : null),
+      list.length ? el('div', { class: 'm-days' }, dayKeys.map(function (d) {
+        var items = groups[d].slice().sort(function (a, b) { return b.t - a.t; });
+        var sum = items.reduce(function (s, e) { return s + toJPY(e); }, 0);
+        return rise(el('div', { class: 'rows m-day' }, [
+          el('div', { class: 'm-day-h' }, [el('b', { text: moneyDayName(d) }), el('span', { text: '¥' + fmt(sum) + ' · ' + hkd(sum) })])
+        ].concat(items.map(function (e) {
+          return el('button', { type: 'button', class: 'm-row press cat-' + e.cat, dataset: { id: e.id }, onclick: function () {
+            moneyEdit = e.id; render();
+            var f = document.querySelector('.m-form');
+            if (f) { f.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'center' }); }
+          } }, [
+            el('span', { class: 'm-dot' }),
+            el('span', { class: 'm-what' }, [el('b', { text: e.note || catName(e.cat) }), el('small', { text: catName(e.cat) + (e.pay ? ' · ' + payName(e.pay) : '') })]),
+            el('span', { class: 'm-amt-r' }, [
+              el('b', { text: e.cur === 'HKD' ? 'HK$' + e.amt.toLocaleString('en-US') : '¥' + fmt(e.amt) }),
+              el('small', { text: e.cur === 'HKD' ? '≈ ¥' + fmt(toJPY(e)) : '≈ ' + hkd(e.amt) })
+            ])
+          ]);
+        }))));
+      })) : el('p', { class: 'empty', text: '未有紀錄。喺上面記低第一筆。' }),
+
+      kick(catRows.length ? 4 : 3, '匯率・預算'),
+      rise(el('div', { class: 'card' }, [
+        el('p', { text: 'HK$1 = ¥' + fxRate().toFixed(2) + (manual ? '（自訂）' : fx ? '（自動，' + new Date(fx.t).toLocaleDateString('zh-HK') + ' 更新）' : '（預設值，有網會自動更新）') }),
+        el('div', { class: 'field-row' }, [
+          el('label', { class: 'fld' }, ['自訂匯率 ', el('em', { text: 'HK$1 = ¥…，留空就用自動' }), fxInput]),
+          el('label', { class: 'fld' }, ['總預算 ', el('em', { text: '日圓' }), budgetInput])
+        ]),
+        el('div', { class: 'actions' }, [el('button', { type: 'button', class: 'solid press', text: '儲存', onclick: function () {
+          var f = parseFloat(fxInput.value);
+          lsSet(FX_MANUAL, f > 0 ? String(f) : null);
+          var b = Math.round(parseFloat(String(budgetInput.value).replace(/,/g, '')) || 0);
+          var changed = (b || 0) !== (+t.budget || 0);
+          if (b > 0) t.budget = b; else delete t.budget;
+          render();
+          if (changed) saveTrip('更新旅行預算'); else toast('已儲存', 1600, 'check');
+        } })])
+      ]))
+    ]);
+  }
+
+  function delExpense(e) {
+    if (!confirm('刪除呢筆紀錄？')) return;
+    state.trip.expenses = (state.trip.expenses || []).filter(function (x) { return x.id !== e.id; });
+    moneyEdit = null;
+    render();
+    saveTrip('刪除記帳紀錄');
+  }
+
+  // ================= 離線模式 =================
+  var MEDIA_CACHE = 'kansai-media-v1';
+  var offlineStat = { done: 0, total: 0, busy: false };
+  function mediaUrls() {
+    return state.photos.map(function (p) { return new URL(p.url, location.href).href; });
+  }
+  function precacheMedia(loud) {
+    if (!('caches' in window) || offlineStat.busy || navigator.onLine === false) return Promise.resolve();
+    var urls = mediaUrls();
+    offlineStat = { done: 0, total: urls.length, busy: true };
+    paintOffline();
+    return caches.open(MEDIA_CACHE).then(function (c) {
+      var chain = Promise.resolve();
+      urls.forEach(function (u) {
+        chain = chain.then(function () {
+          return c.match(u).then(function (hit) {
+            if (hit) return;
+            return fetch(u, { mode: 'cors' }).then(function (r) { if (r.ok) return c.put(u, r); });
+          }).then(function () { offlineStat.done++; paintOffline(); }, function () { paintOffline(); });
+        });
+      });
+      return chain;
+    }).then(function () {
+      offlineStat.busy = false;
+      paintOffline();
+      if (loud) toast(offlineStat.done === offlineStat.total ? '全部檔案已儲存，可以離線睇' : '部分檔案下載唔到，有網再試', 2600, offlineStat.done === offlineStat.total ? 'check' : 'alert');
+    }, function () { offlineStat.busy = false; paintOffline(); });
+  }
+  function renderOfflineCard() {
+    return el('div', { class: 'card rise', style: '--i:2' }, [
+      el('div', { class: 'card-title' }, [icon('offline'), '離線模式']),
+      el('p', { text: '行程、預約編號、記帳同相片會儲存喺呢部手機，搭地鐵或者冇網都睇到。離線時改嘅嘢會先存喺手機，有網會自動上載。' }),
+      el('p', { class: 'off-stat' }),
+      el('div', { class: 'actions' }, [el('button', { type: 'button', class: 'ghost press', onclick: function () { precacheMedia(true); } }, [icon('download'), '立即下載全部相片'])])
+    ]);
+  }
+  function paintOffline() {
+    var p = document.querySelector('.off-stat');
+    if (!p) return;
+    var sw = 'serviceWorker' in navigator && navigator.serviceWorker.controller;
+    p.textContent = (sw ? '✓ 離線模式已啟用' : '離線模式準備中（重新開一次網頁就會啟用）') +
+      (offlineStat.total ? ' · 相片 ' + offlineStat.done + ' / ' + offlineStat.total + (offlineStat.busy ? ' 下載中…' : ' 已儲存') : '');
+  }
+  function updateOnline() {
+    body.classList.toggle('is-offline', navigator.onLine === false);
+    if (navigator.onLine === false) { setSync('offline'); return; }
+    // 返回線上：上載離線時嘅修改
+    if (state.token && lsGet(LS.draft) && state.trip) {
+      saveTrip('上載離線時嘅修改').then(function (ok) { if (ok) toast('已上載離線時嘅修改', 2400, 'cloud'); });
+    } else if (state.token && state.source !== 'github') boot();
+    else if (state.token) setSync('ok');
+    fillWeather();
+  }
+  window.addEventListener('online', updateOnline);
+  window.addEventListener('offline', updateOnline);
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').then(function () { return navigator.serviceWorker.ready; }).then(paintOffline).catch(function () {});
+    });
   }
 
   // ================= 相片 =================
@@ -1778,7 +2329,13 @@
   document.querySelectorAll('[data-icon]').forEach(function (n) { n.insertBefore(icon(n.dataset.icon), n.firstChild); });
 
   function boot() {
-    return Promise.all([loadTrip(), loadPhotos()]).then(render).catch(function (e) {
+    return Promise.all([loadTrip(), loadPhotos()]).then(function () {
+      render();
+      if (navigator.onLine === false) setSync('offline');
+      paintOffline();
+      loadFx().then(function (ch) { if (ch && state.tab === 'money') render(); });
+      setTimeout(function () { precacheMedia(false); }, 2500);
+    }).catch(function (e) {
       document.getElementById('main').textContent = '載入失敗：' + e.message;
     });
   }

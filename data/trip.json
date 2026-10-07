@@ -8,26 +8,27 @@
       "label": "去程",
       "code": "HX616",
       "date": "10/23（五）",
-      "from": "香港國際機場",
-      "dep": "03:05",
+      "from": "香港國際機場 T2",
+      "dep": "02:50",
       "to": "關西國際機場 T1",
       "arr": "07:55",
       "status": "confirmed",
       "from_code": "HKG",
       "to_code": "KIX",
-      "note": "關西 Terminal 1"
+      "note": "香港 T2 → 關西 T1"
     },
     {
       "label": "回程",
       "code": "HX613",
       "date": "10/29（四）",
-      "from": "關西國際機場",
-      "dep": "20:15",
-      "to": "香港國際機場",
-      "arr": "23:25",
+      "from": "關西國際機場 T1",
+      "dep": "20:05",
+      "to": "香港國際機場 T1",
+      "arr": "23:40",
       "status": "confirmed",
       "from_code": "KIX",
-      "to_code": "HKG"
+      "to_code": "HKG",
+      "note": "關西 T1 → 香港 T1"
     }
   ],
   "hotels": [
@@ -844,7 +845,7 @@
         },
         {
           "id": "d7-06",
-          "time": "20:15",
+          "time": "20:05",
           "what": "HX613 起飛返回香港",
           "place": "関西国際空港",
           "address": "",
@@ -856,7 +857,7 @@
         },
         {
           "id": "d7-07",
-          "time": "23:25",
+          "time": "23:40",
           "what": "抵達香港",
           "place": "",
           "address": "",
