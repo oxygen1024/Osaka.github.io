@@ -703,28 +703,88 @@
   }
 
   // ---------- 待辦 ----------
+  // 兩種：行程入面標咗「待處理」嘅（剔咗只存喺呢部手機），同自己加嘅（存喺 trip.json，會同步）
   function renderTodo() {
+    var t = state.trip;
     var list = [];
-    state.trip.days.forEach(function (d, di) {
+    t.days.forEach(function (d, di) {
       d.items.forEach(function (it, ii) { if (it.status === 'pending') list.push({ it: it, di: di, ii: ii }); });
     });
+    var mine = t.todos || [];
+    var input = el('input', { name: 'text', placeholder: '例如：換日圓、買旅遊保險', autocomplete: 'off', 'aria-label': '待辦內容', enterkeyhint: 'done' });
+    var daySel = el('select', { name: 'day', 'aria-label': '關於邊日' }, [el('option', { value: '-1', text: '唔關日子' })].concat(t.days.map(function (d, i) {
+      return el('option', { value: String(i), text: 'Day ' + (i + 1) + ' · ' + md(dayDate(i)) });
+    })));
+    var form = el('form', { class: 'todo-add', autocomplete: 'off' }, [
+      input,
+      daySel,
+      el('button', { type: 'submit', class: 'solid press' }, [icon('plus'), '加入'])
+    ]);
+    form.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var text = input.value.trim();
+      if (!text) { input.focus(); return; }
+      t.todos = t.todos || [];
+      var rec = { id: newId(), text: text, day: +daySel.value, done: false };
+      t.todos.push(rec);
+      buzz(10);
+      render();
+      var row = document.querySelector('.todo-list li[data-todo="' + rec.id + '"]');
+      if (row && !REDUCED) row.animate([{ opacity: 0, transform: 'translateY(-6px) scale(.98)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: EASE_OUT });
+      var again = document.querySelector('.todo-add input');
+      if (again) again.focus();
+      saveTrip('新增待辦：' + text);
+    });
+
+    var rows = mine.slice().sort(function (a, b) { return (a.done ? 1 : 0) - (b.done ? 1 : 0); }).map(function (x) {
+      var lab = tag('pending', 'mine', 'todo-box');
+      var box = lab.querySelector('input');
+      delete box.dataset.key;
+      box.dataset.todo = x.id;
+      box.checked = !!x.done;
+      return el('li', { class: x.done ? 'mine checked' : 'mine', dataset: { todo: x.id } }, [
+        lab,
+        el('div', { class: 'todo-text' }, [
+          el('small', { text: x.day >= 0 && t.days[x.day] ? 'Day ' + (x.day + 1) + ' · ' + md(dayDate(x.day)) : '自己加' }),
+          el('b', { text: x.text })
+        ]),
+        el('div', { class: 'todo-tools' }, [
+          iconBtn('edit', '修改', function () {
+            var v = prompt('修改待辦', x.text);
+            if (v === null || !v.trim() || v.trim() === x.text) return;
+            x.text = v.trim();
+            render();
+            saveTrip('修改待辦：' + x.text);
+          }),
+          iconBtn('trash', '刪除', function () {
+            if (!confirm('刪除「' + x.text + '」？')) return;
+            t.todos = t.todos.filter(function (y) { return y.id !== x.id; });
+            render();
+            saveTrip('刪除待辦：' + x.text);
+          })
+        ])
+      ]);
+    }).concat(list.map(function (x) {
+      return el('li', null, [
+        tag('pending', x.it.id, 'todo-box'),
+        el('div', { class: 'todo-text' }, [
+          el('small', { text: 'Day ' + (x.di + 1) + (x.it.time ? ' · ' + x.it.time : '') + ' · 行程' }),
+          el('b', { text: x.it.what })
+        ]),
+        el('div', { class: 'todo-tools' }, [
+          iconBtn('edit', '編輯', function () { openEdit(x.di, x.ii); }),
+          el('a', { class: 'icon-btn press', href: '#day' + (x.di + 1), 'aria-label': '去 Day ' + (x.di + 1) }, [icon('chevron')])
+        ])
+      ]);
+    }));
+    rows.forEach(function (li, i) { li.classList.add('rise'); li.style.setProperty('--i', Math.min(i + 1, 8)); });
+
     return el('section', { class: 'panel', id: 'todo', role: 'tabpanel' }, [
       el('div', { class: 'todo-hero' }, [el('b', { id: 'todo-big', text: list.length }), el('span', { text: '項待處理' })]),
-      el('p', { class: 'fine', text: '標咗「待處理」嘅行程會自動列喺度；喺度剔咗，當日行程都會一齊剔（只存喺呢部手機）。' }),
-      list.length ? el('ul', { class: 'todo-list' }, list.map(function (x, i) {
-        var li = el('li', { class: 'rise', style: '--i:' + i }, [
-          tag('pending', x.it.id, 'todo-box'),
-          el('div', { class: 'todo-text' }, [
-            el('small', { text: 'Day ' + (x.di + 1) + (x.it.time ? ' · ' + x.it.time : '') }),
-            el('b', { text: x.it.what })
-          ]),
-          el('div', { class: 'todo-tools' }, [
-            iconBtn('edit', '編輯', function () { openEdit(x.di, x.ii); }),
-            el('a', { class: 'icon-btn press', href: '#day' + (x.di + 1), 'aria-label': '去 Day ' + (x.di + 1) }, [icon('chevron')])
-          ])
-        ]);
-        return li;
-      })) : el('div', { class: 'done-state' }, [el('div', { class: 'stamp', text: '完了' }), el('p', { text: '冇待處理事項，全部搞掂。' })])
+      form,
+      rows.length ? el('ul', { class: 'todo-list' }, rows)
+        : el('div', { class: 'done-state' }, [el('div', { class: 'stamp', text: '完了' }), el('p', { text: '冇待處理事項，全部搞掂。' })]),
+      el('p', { class: 'fine', text: '自己加嘅待辦會同步去其他裝置；行程標咗「待處理」嘅會自動列喺度，剔咗只存喺呢部手機。' })
     ]);
   }
 
@@ -2196,6 +2256,17 @@
 
   document.getElementById('main').addEventListener('change', function (e) {
     var b = e.target;
+    if (b.matches && b.matches('input[type=checkbox][data-todo]')) {
+      var td = (state.trip.todos || []).filter(function (x) { return x.id === b.dataset.todo; })[0];
+      if (!td) return;
+      td.done = b.checked;
+      b.closest('li').classList.toggle('checked', b.checked);
+      var n = refreshChecks();
+      tickFx(b);
+      if (b.checked && n === 0) toast('所有待辦已完成', 2600, 'check');
+      saveTrip((b.checked ? '完成待辦：' : '重開待辦：') + td.text);
+      return;
+    }
     if (!b.matches || !b.matches('input[type=checkbox][data-key]')) return;
     if (b.checked) state.checks[b.dataset.key] = 1; else delete state.checks[b.dataset.key];
     lsSet(LS.checks, JSON.stringify(state.checks));

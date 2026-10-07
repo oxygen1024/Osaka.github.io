@@ -144,6 +144,7 @@ function tonightHotel(trip, now, ph) {
 
 function pendingItems(trip) {
   const out = [];
+  (trip.todos || []).forEach((t) => { if (!t.done) out.push({ it: { what: t.text }, di: t.day >= 0 ? t.day : -1 }); });
   trip.days.forEach((d, di) => d.items.forEach((it) => { if (it.status === 'pending') out.push({ it: it, di: di }); }));
   return out;
 }
@@ -487,9 +488,9 @@ function wTodo(trip, now, ph, fam) {
   const max = fam === 'small' ? 2 : fam === 'medium' ? 3 : 10;
   list.slice(0, max).forEach((x) => {
     const it = row(w);
-    it.url = dayUrl(x.di);
+    it.url = x.di >= 0 ? dayUrl(x.di) : SITE + '#todo';
     sym(it, 'circle', 9, C.yama); it.addSpacer(5);
-    txt(it, 'D' + (x.di + 1) + ' ', F.bold(10), C.ink3);
+    if (x.di >= 0) txt(it, 'D' + (x.di + 1) + ' ', F.bold(10), C.ink3);
     txt(it, x.it.what, F.semi(fam === 'small' ? 10 : 12), C.ink, 1);
     w.addSpacer(3);
   });
