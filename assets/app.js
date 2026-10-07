@@ -1281,7 +1281,7 @@
     return out;
   }
 
-  var wx = { now: null, past: null, busy: false };
+  var wx = { now: null, past: null, busy: false, tried: false, pastFail: 0 };
   function loadWeather(force) {
     var c = readJSON(WX_LS), p = readJSON(WX_PAST_LS);
     if (c) wx.now = c;
@@ -1296,11 +1296,12 @@
     // 預報最多 16 日；未出預報嗰幾日用去年同期做參考
     var s = state.trip.start_date, e = state.trip.end_date;
     var ps = (+s.slice(0, 4) - 1) + s.slice(4), pe = (+e.slice(0, 4) - 1) + e.slice(4);
-    if (navigator.onLine !== false && (!p || p.range !== ps + pe)) {
+    if (navigator.onLine !== false && (!p || p.range !== ps + pe) && Date.now() - wx.pastFail > 30 * 60e3) {
       jobs.push(fetch(wxQuery('https://archive-api.open-meteo.com/v1/archive',
         '&start_date=' + ps + '&end_date=' + pe + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum'))
         .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-        .then(function (j) { wx.past = wxIndex(j, false); lsSet(WX_PAST_LS, JSON.stringify({ range: ps + pe, data: wx.past })); }));
+        .then(function (j) { wx.past = wxIndex(j, false); lsSet(WX_PAST_LS, JSON.stringify({ range: ps + pe, data: wx.past })); })
+        .catch(function (err) { wx.pastFail = Date.now(); throw err; }));
     }
     return Promise.all(jobs.map(function (j) { return j.catch(function () {}); }));
   }
@@ -1318,7 +1319,7 @@
     paintWeather();
     if (wx.busy) return;
     wx.busy = true;
-    loadWeather(force).then(function () { wx.busy = false; paintWeather(); });
+    loadWeather(force).then(function () { wx.busy = false; wx.tried = true; paintWeather(); });
   }
 
   function paintWeather() {
@@ -1376,10 +1377,12 @@
         w && w.live && w.f.pop != null ? el('em', { class: w.f.pop >= 50 ? 'wet' : null, text: w.f.pop + '%' }) : el('em', { text: w ? '去年' : '' })
       ]);
     });
-    week.appendChild(el('div', { class: 'wx-grid' }, cells));
     var hasLive = days.some(function (d, di) { var w = wxFor(dayCities(di)[0], ymd(dayDate(di))); return w && w.live; });
     var hasAny = days.some(function (d, di) { return !!wxFor(dayCities(di)[0], ymd(dayDate(di))); });
-    week.appendChild(el('p', { class: 'fine', text: !hasAny ? (navigator.onLine === false ? '離線中，未有天氣資料' : '載入天氣中…')
+    if (hasAny) week.appendChild(el('div', { class: 'wx-grid' }, cells));
+    var opens = new Date(dayDate(0).getTime() - 15 * 864e5);
+    week.appendChild(el('p', { class: 'fine', text: !hasAny ? (navigator.onLine === false ? '離線中，未有天氣資料'
+        : !wx.tried ? '載入天氣中…' : '天氣預報 ' + md(opens) + ' 左右開始有，到時會自動顯示。')
       : (hasLive ? '最高 / 最低溫，% 係降雨機會。' : '') + (days.every(function (d, di) { var w = wxFor(dayCities(di)[0], ymd(dayDate(di))); return w && w.live; }) ? '' : '淡色係去年同日嘅天氣，預報出發前 16 日先有。') }));
   }
   setInterval(function () { if (!document.hidden && state.trip) fillWeather(); }, 30 * 60e3);
@@ -1587,6 +1590,15 @@
         } })])
       ]))
     ]);
+  }
+
+  // 匯率更新咗：淨係重畫記帳頁（唔好打斷緊輸入緊嘅表單）
+  function refreshMoney() {
+    var old = document.getElementById('money');
+    if (!old || old.contains(document.activeElement)) return;
+    var fresh = renderMoney();
+    if (old.classList.contains('active')) fresh.classList.add('active');
+    old.replaceWith(fresh);
   }
 
   function delExpense(e) {
@@ -2333,7 +2345,7 @@
       render();
       if (navigator.onLine === false) setSync('offline');
       paintOffline();
-      loadFx().then(function (ch) { if (ch && state.tab === 'money') render(); });
+      loadFx().then(function (ch) { if (ch) refreshMoney(); });
       setTimeout(function () { precacheMedia(false); }, 2500);
     }).catch(function (e) {
       document.getElementById('main').textContent = '載入失敗：' + e.message;
