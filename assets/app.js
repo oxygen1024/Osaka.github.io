@@ -1336,15 +1336,15 @@
         var f = w.f, c = wxCode(f.code);
         if (!w.live) ref = true;
         if (w.live && f.pop != null && f.pop >= 50) wet = true;
-        box.appendChild(el('div', { class: 'wx-row' + (w.live ? '' : ' ref') }, [
+        box.appendChild(el('div', { class: 'wx-row' + (w.live ? '' : ' wx-past') }, [
           el('span', { class: 'wx-ic' }, [icon(c[0])]),
           el('div', { class: 'wx-main' }, [
             el('b', { text: CITIES[k].name }),
-            el('span', { text: (w.live ? '' : '去年同日 · ') + c[1] })
+            el('span', { text: c[1] + (w.live ? '' : ' · 去年') })
           ]),
           el('div', { class: 'wx-temp' }, [el('b', { text: deg(f.hi) }), el('span', { text: deg(f.lo) })]),
           w.live && f.pop != null ? el('div', { class: 'wx-pop' + (f.pop >= 50 ? ' wet' : '') }, [icon('umbrella'), f.pop + '%'])
-            : (!w.live && f.rain != null ? el('div', { class: 'wx-pop' }, [icon('umbrella'), f.rain.toFixed(1) + 'mm']) : null)
+            : (!w.live && f.rain != null ? el('div', { class: 'wx-pop' }, [icon('umbrella'), f.rain < 0.1 ? '無雨' : f.rain.toFixed(1) + 'mm']) : null)
         ]));
         if (w.live && f.hours.length && k === dayCities(di)[0]) {
           box.appendChild(el('div', { class: 'wx-hours' }, f.hours.map(function (h) {
@@ -1368,7 +1368,7 @@
     week.textContent = '';
     var cells = days.map(function (d, di) {
       var k = dayCities(di)[0], date = ymd(dayDate(di)), w = wxFor(k, date), dd = dayDate(di);
-      return el('a', { class: 'wx-cell press' + (w && !w.live ? ' ref' : ''), href: '#day' + (di + 1) }, [
+      return el('a', { class: 'wx-cell press' + (w && !w.live ? ' wx-past' : ''), href: '#day' + (di + 1) }, [
         el('small', { text: md(dd) + ' ' + wd(dd) }),
         el('span', { class: 'wx-city', text: CITIES[k].name }),
         icon(w ? wxCode(w.f.code)[0] : 'wcloud'),
