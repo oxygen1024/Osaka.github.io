@@ -800,8 +800,10 @@
     try { cached = JSON.parse(lsGet(ck) || 'null'); } catch (e) {}
     if (cached && !flightLive[fi]) flightLive[fi] = cached;
     var n = nowMs();
-    var inWindow = n > ft.dep - 48 * 36e5 && n < ft.arr + 6 * 36e5;
-    if (!force && (!inWindow || (cached && Date.now() - cached.t < 10 * 6e4))) return Promise.resolve(cached);
+    // 免費方案每月 400 units：起飛前 48–6 小時每 3 小時一次；之後到降落後 2 小時每 15 分鐘一次
+    var inWindow = n > ft.dep - 48 * 36e5 && n < ft.arr + 2 * 36e5;
+    var every = n < ft.dep - 6 * 36e5 ? 3 * 36e5 : 15 * 6e4;
+    if (!force && (!inWindow || (cached && Date.now() - cached.t < every))) return Promise.resolve(cached);
     if (flightBusy[fi]) return flightBusy[fi];
     var url = 'https://' + ADB_HOST + '/flights/number/' + encodeURIComponent(f.code) + '/' + ft.date +
       '?dateLocalRole=Departure&withAircraftImage=false&withLocation=false';
@@ -936,7 +938,7 @@
     var input = el('input', { type: 'password', placeholder: 'X-RapidAPI-Key', value: lsGet(ADB_LS) || '', autocomplete: 'off', spellcheck: 'false' });
     return el('div', { class: 'card rise', style: '--i:2' }, [
       el('div', { class: 'card-title' }, [icon('plane'), has ? '已連接航班數據' : '航班即時數據（選用）']),
-      el('p', { text: '加入 AeroDataBox 免費 key 之後，機票卡會顯示真實狀態、延誤、閘口同行李帶；起飛前 48 小時至降落後自動每 10 分鐘更新。冇 key 都會按時刻表顯示倒數同飛行進度。' }),
+      el('p', { text: '加入 AeroDataBox 免費 key 之後，機票卡會顯示真實狀態、延誤、閘口同行李帶；起飛前 48 小時開始自動更新（臨近起飛同飛行中每 15 分鐘一次）。冇 key 都會按時刻表顯示倒數同飛行進度。' }),
       el('ol', { class: 'steps compact' }, [
         el('li', null, ['打開 ', el('a', { href: 'https://rapidapi.com/aedbx-aedbx/api/aerodatabox/pricing', target: '_blank', rel: 'noopener', text: 'RapidAPI · AeroDataBox' }), '，註冊／登入']),
         el('li', { text: '揀免費嗰個 Basic 方案 → Subscribe' }),
