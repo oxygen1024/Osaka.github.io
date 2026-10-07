@@ -791,9 +791,56 @@
     return { status: f.status || 'Unknown', dep: side(f.departure), arr: side(f.arrival), aircraft: (f.aircraft && f.aircraft.model) || '' };
   }
 
+  // aviationstack key = 32 位 hex；其他當 AeroDataBox（RapidAPI / API.Market）
+  function flightProvider(key) { return /^[0-9a-f]{32}$/i.test(key || '') ? 'aviationstack' : 'aerodatabox'; }
+
+  var AS_STATUS = { scheduled: 'Expected', active: 'EnRoute', landed: 'Landed', cancelled: 'Canceled', incident: 'Unknown', diverted: 'Diverted' };
+  // aviationstack 嘅時間其實係機場當地時間（雖然寫 +00:00），要配返機場時區
+  function asTime(s, tz) {
+    if (!s) return null;
+    var m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(s);
+    if (!m) return null;
+    var ms = Date.parse(m[1] + 'T' + m[2] + ':00' + (tz || '+09:00'));
+    return isNaN(ms) ? null : { ms: ms, hm: m[2] };
+  }
+  function parseAviationstack(j, f, ft) {
+    var list = (j && j.data) || [];
+    var hit = list.filter(function (x) { return x.flight_date === ft.date; })[0];
+    if (!hit) return null;
+    function side(x, tz) {
+      x = x || {};
+      return {
+        sched: asTime(x.scheduled, tz),
+        best: asTime(x.actual || x.estimated_runway || x.estimated, tz),
+        terminal: x.terminal || '', gate: x.gate || '', belt: x.baggage || '', desk: ''
+      };
+    }
+    var dep = side(hit.departure, TZ[(hit.departure || {}).iata] || TZ[f.from_code]);
+    var arr = side(hit.arrival, TZ[(hit.arrival || {}).iata] || TZ[f.to_code]);
+    if (dep.best && dep.sched && dep.best.ms === dep.sched.ms) dep.best = null;
+    if (arr.best && arr.sched && arr.best.ms === arr.sched.ms) arr.best = null;
+    var st = AS_STATUS[hit.flight_status] || 'Unknown';
+    if (st === 'Expected' && hit.departure && hit.departure.delay >= 15) st = 'Delayed';
+    return { status: st, dep: dep, arr: arr, aircraft: (hit.aircraft && hit.aircraft.iata) || '' };
+  }
+  function asFetch(key, f) {
+    var url = 'https://api.aviationstack.com/v1/flights?access_key=' + encodeURIComponent(key) + '&flight_iata=' + encodeURIComponent(String(f.code).replace(/\s+/g, '')) + '&limit=10';
+    return fetch(url, { cache: 'no-store' }).then(function (r) { return r.json(); }, function () { throw new Error('連唔到 aviationstack'); })
+      .then(function (j) {
+        if (j && j.error) {
+          var c = j.error.code || '';
+          if (/usage_limit/.test(c)) throw new Error('aviationstack 今個月 100 次額度用完');
+          if (/invalid_access_key|missing_access_key|inactive_user/.test(c)) throw new Error('aviationstack key 無效');
+          throw new Error('aviationstack：' + (j.error.message || c));
+        }
+        return j;
+      });
+  }
+
   function fetchFlight(f, fi, force) {
     var key = lsGet(ADB_LS);
     if (!key) return Promise.resolve(null);
+    var prov = flightProvider(key);
     var ft = flightTimes(f, fi);
     var ck = 'kansai-fl-' + f.code + '-' + ft.date;
     var cached = null;
@@ -803,13 +850,20 @@
     // 免費方案每月 400 units：起飛前 48–6 小時每 3 小時一次；之後到降落後 2 小時每 15 分鐘一次
     var inWindow = n > ft.dep - 48 * 36e5 && n < ft.arr + 2 * 36e5;
     var every = n < ft.dep - 6 * 36e5 ? 3 * 36e5 : 15 * 6e4;
+    if (prov === 'aviationstack') {
+      // 免費 100 次／月，而且只有當日實時數據：起飛前 6 小時至降落後 1 小時，每 30 分鐘一次
+      inWindow = n > ft.dep - 6 * 36e5 && n < ft.arr + 36e5;
+      every = 30 * 6e4;
+    }
     if (!force && (!inWindow || (cached && Date.now() - cached.t < every))) return Promise.resolve(cached);
     if (flightBusy[fi]) return flightBusy[fi];
     var path = '/flights/number/' + encodeURIComponent(f.code) + '/' + ft.date +
       '?dateLocalRole=Departure&withAircraftImage=false&withLocation=false';
-    flightBusy[fi] = adbFetch(key, path)
+    flightBusy[fi] = (prov === 'aviationstack'
+      ? asFetch(key, f).then(function (j) { return { __as: parseAviationstack(j, f, ft) }; })
+      : adbFetch(key, path))
       .then(function (j) {
-        var data = parseLive(j);
+        var data = j && j.__as !== undefined ? j.__as : parseLive(j);
         var rec = { t: Date.now(), data: data };
         if (data) lsSet(ck, JSON.stringify(rec));
         flightLive[fi] = data ? rec : { t: Date.now(), data: null, empty: true };
@@ -930,8 +984,8 @@
         return;
       }
       if (rec && rec.err) lv.appendChild(el('span', { class: 'pl-note warn', text: rec.err }));
-      if (rec && rec.empty) lv.appendChild(el('span', { class: 'pl-note', text: '暫時未有呢班機嘅即時數據（通常出發前一兩日先有）' }));
-      if (!rec) lv.appendChild(el('span', { class: 'pl-note', text: n < ft.dep - 48 * 36e5 ? '起飛前 48 小時內會自動更新真實數據' : '更新緊…' }));
+      if (rec && rec.empty) lv.appendChild(el('span', { class: 'pl-note', text: '暫時未有呢班機當日嘅即時數據（出發當日先會有）' }));
+      if (!rec) lv.appendChild(el('span', { class: 'pl-note', text: n < ft.dep - (flightProvider(lsGet(ADB_LS)) === 'aviationstack' ? 6 : 48) * 36e5 ? '起飛前 ' + (flightProvider(lsGet(ADB_LS)) === 'aviationstack' ? 6 : 48) + ' 小時內會自動更新真實數據' : '更新緊…' }));
       if (live) {
         var depDelay = live.dep.sched && live.dep.best ? Math.round((live.dep.best.ms - live.dep.sched.ms) / 6e4) : 0;
         var stTxt = FL_STATUS[st] || st;
@@ -974,11 +1028,11 @@
     var input = el('input', { type: 'password', placeholder: 'X-RapidAPI-Key', value: lsGet(ADB_LS) || '', autocomplete: 'off', spellcheck: 'false' });
     return el('div', { class: 'card rise', style: '--i:2' }, [
       el('div', { class: 'card-title' }, [icon('plane'), has ? '已連接航班數據' : '航班即時數據（選用）']),
-      el('p', { text: '加入 AeroDataBox 免費 key 之後，機票卡會顯示真實狀態、延誤、閘口同行李帶；起飛前 48 小時開始自動更新（臨近起飛同飛行中每 15 分鐘一次）。冇 key 都會按時刻表顯示倒數同飛行進度。' }),
+      el('p', { text: '支援 aviationstack（免費 100 次／月）或 AeroDataBox 嘅 key，網站會自動識別。加入之後，機票卡會顯示真實狀態、延誤、閘口同行李帶，臨近起飛同飛行中自動更新。冇 key 都會按時刻表顯示倒數同飛行進度。' }),
       el('ol', { class: 'steps compact' }, [
-        el('li', null, ['打開 ', el('a', { href: 'https://rapidapi.com/aedbx-aedbx/api/aerodatabox/pricing', target: '_blank', rel: 'noopener', text: 'RapidAPI · AeroDataBox' }), '，註冊／登入']),
-        el('li', { text: '揀免費嗰個 Basic 方案 → Subscribe' }),
-        el('li', { text: '去 Endpoints 頁，複製右邊 X-RapidAPI-Key，貼落下面' })
+        el('li', null, ['打開 ', el('a', { href: 'https://aviationstack.com/signup/free', target: '_blank', rel: 'noopener', text: 'aviationstack' }), ' 註冊免費方案（或者用 AeroDataBox）']),
+        el('li', { text: 'Dashboard 最頂「Your API Key」撳複製' }),
+        el('li', { text: '貼落下面，撳「儲存並測試」（測試會用 1 次額度）' })
       ]),
       el('label', { class: 'fld' }, ['API Key', input]),
       el('div', { class: 'actions' }, [
@@ -998,7 +1052,7 @@
         } }),
         has ? el('button', { type: 'button', class: 'ghost press', text: '移除', onclick: function () { lsSet(ADB_LS, null); toast('已移除', 1800); render(); } }) : null
       ]),
-      el('p', { class: 'fine', text: 'Key 只會儲存喺呢部裝置。免費方案每月次數有限，所以只會喺航班前後先自動更新。' })
+      el('p', { class: 'fine', text: 'Key 只會儲存喺呢部裝置。免費方案每月次數有限：aviationstack 只會喺起飛前 6 小時至降落後 1 小時，每 30 分鐘更新一次（兩班機合共約 40 次）。' })
     ]);
   }
 
