@@ -329,6 +329,7 @@
     main.appendChild(renderTodo());
     main.appendChild(renderSettings());
     refreshChecks();
+    refreshFlights();
     show(state.tab && document.getElementById(state.tab) ? state.tab : pickStartTab(), !firstRender, true);
     firstRender = false;
   }
@@ -505,7 +506,7 @@
 
     if ((t.flights || []).length) {
       sec.appendChild(kick(++k, '機票'));
-      t.flights.forEach(function (f) {
+      t.flights.forEach(function (f, fi) {
         sec.appendChild(rise(el('article', { class: 'pass' }, [
           el('div', { class: 'pass-main' }, [
             el('div', { class: 'pass-top' }, [el('span', { text: f.label + ' · ' + f.date }), tag(f.status, 'flight-' + f.code)]),
@@ -516,7 +517,8 @@
             ]),
             el('div', { class: 'pass-names' }, [el('span', { text: f.from }), el('span', { text: f.to })])
           ]),
-          el('div', { class: 'pass-stub' }, [el('span', null, ['航班 ', el('b', { text: f.code })]), el('span', { text: f.note || '' })])
+          el('div', { class: 'pass-stub' }, [el('span', null, ['航班 ', el('b', { text: f.code })]), el('span', { text: f.note || '' })]),
+          flightLiveBox(f, fi)
         ])));
       });
     }
@@ -723,10 +725,13 @@
         ])
       ]) : null,
 
-      kick(2, '主畫面小工具'),
+      kick(2, '航班即時數據'),
+      renderFlightKeyCard(),
+
+      kick(3, '主畫面小工具'),
       renderWidgetCard(),
 
-      kick(3, '點樣攞 Token'),
+      kick(4, '點樣攞 Token'),
       el('ol', { class: 'steps' }, [
         el('li', null, ['打開 ', el('a', { href: 'https://github.com/settings/personal-access-tokens/new', target: '_blank', rel: 'noopener', text: 'GitHub → 新增 Fine-grained token' })]),
         el('li', { text: 'Token name 隨便填；Expiration 揀旅行完之後嘅日子' }),
@@ -735,6 +740,226 @@
         el('li', { text: 'Generate token，複製 github_pat_ 開頭嗰串字，貼落上面' })
       ]),
       el('p', { class: 'fine', text: 'Token 只會儲存喺呢部裝置嘅瀏覽器。唔見咗手機可以喺 GitHub 刪除個 token。' })
+    ]);
+  }
+
+  // ================= 航班狀態 =================
+  // A：按時刻表即時推算（倒數 / 飛行進度）；B：有 AeroDataBox key 就讀真實數據
+  var ADB_LS = 'kansai-adb-key';
+  var ADB_HOST = 'aerodatabox.p.rapidapi.com';
+  var TZ = { HKG: '+08:00', KIX: '+09:00', ITM: '+09:00', UKB: '+09:00', NRT: '+09:00', HND: '+09:00', TPE: '+08:00', MFM: '+08:00' };
+  var FL_STATUS = {
+    Unknown: '未知', Expected: '預定', EnRoute: '飛行中', CheckIn: '辦理登機', Boarding: '登機中',
+    GateClosed: '閘口已關', Departed: '已起飛', Delayed: '延誤', Approaching: '即將降落', Arrived: '已到達',
+    Landed: '已降落', Diverted: '改降', Canceled: '取消', Cancelled: '取消', CanceledUncertain: '可能取消'
+  };
+  var flightLive = {};   // fi -> {t, data} | {err}
+  var flightBusy = {};
+
+  function nowMs() {
+    var q = new URLSearchParams(location.search).get('now');
+    if (q && /^\d{4}-\d{2}-\d{2}T\d{1,2}:\d{2}$/.test(q)) return Date.parse(q.replace(/T(\d):/, 'T0$1:') + ':00+09:00');
+    return Date.now();
+  }
+  function hhmm(t) { var m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? pad2(+m[1]) + ':' + m[2] : '00:00'; }
+  function flightTimes(f, i) {
+    var t = state.trip;
+    var d = f.dep_date || (i === 0 ? t.start_date : t.end_date);
+    var ad = f.arr_date || d;
+    var dep = Date.parse(d + 'T' + hhmm(f.dep) + ':00' + (f.dep_tz || TZ[f.from_code] || '+09:00'));
+    var arr = Date.parse(ad + 'T' + hhmm(f.arr) + ':00' + (f.arr_tz || TZ[f.to_code] || '+09:00'));
+    if (arr <= dep) arr += 864e5;
+    return { date: d, dep: dep, arr: arr };
+  }
+  function parseTimeObj(o) {
+    if (!o) return null;
+    var s = typeof o === 'string' ? o : (o.local || o.utc);
+    if (!s) return null;
+    var ms = Date.parse(s.replace(' ', 'T'));
+    var m = /(\d{2}:\d{2})/.exec(s);
+    return isNaN(ms) ? null : { ms: ms, hm: m ? m[1] : '' };
+  }
+  function parseLive(json) {
+    var f = Array.isArray(json) ? json[0] : json;
+    if (!f || !f.departure) return null;
+    function side(x) {
+      x = x || {};
+      var sched = parseTimeObj(x.scheduledTime || x.scheduledTimeLocal);
+      var best = parseTimeObj(x.actualTime || x.runwayTime || x.revisedTime || x.predictedTime || x.actualTimeLocal);
+      return { sched: sched, best: best, terminal: x.terminal || '', gate: x.gate || '', belt: x.baggageBelt || '', desk: x.checkInDesk || '' };
+    }
+    return { status: f.status || 'Unknown', dep: side(f.departure), arr: side(f.arrival), aircraft: (f.aircraft && f.aircraft.model) || '' };
+  }
+
+  function fetchFlight(f, fi, force) {
+    var key = lsGet(ADB_LS);
+    if (!key) return Promise.resolve(null);
+    var ft = flightTimes(f, fi);
+    var ck = 'kansai-fl-' + f.code + '-' + ft.date;
+    var cached = null;
+    try { cached = JSON.parse(lsGet(ck) || 'null'); } catch (e) {}
+    if (cached && !flightLive[fi]) flightLive[fi] = cached;
+    var n = nowMs();
+    var inWindow = n > ft.dep - 48 * 36e5 && n < ft.arr + 6 * 36e5;
+    if (!force && (!inWindow || (cached && Date.now() - cached.t < 10 * 6e4))) return Promise.resolve(cached);
+    if (flightBusy[fi]) return flightBusy[fi];
+    var url = 'https://' + ADB_HOST + '/flights/number/' + encodeURIComponent(f.code) + '/' + ft.date +
+      '?dateLocalRole=Departure&withAircraftImage=false&withLocation=false';
+    flightBusy[fi] = fetch(url, { headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': ADB_HOST }, cache: 'no-store' })
+      .then(function (r) {
+        if (r.status === 204) return [];
+        if (r.status === 401 || r.status === 403) throw new Error('API key 無效，或者未 Subscribe AeroDataBox');
+        if (r.status === 429) throw new Error('今個月免費額度用完');
+        if (!r.ok) throw new Error('航班數據錯誤 ' + r.status);
+        return r.json();
+      }, function () { throw new Error('連唔到航班數據服務'); })
+      .then(function (j) {
+        var data = parseLive(j);
+        var rec = { t: Date.now(), data: data };
+        if (data) lsSet(ck, JSON.stringify(rec));
+        flightLive[fi] = data ? rec : { t: Date.now(), data: null, empty: true };
+        return flightLive[fi];
+      }, function (e) {
+        flightLive[fi] = { t: Date.now(), err: e.message, data: cached && cached.data };
+        throw e;
+      })
+      .then(function (x) { delete flightBusy[fi]; updateFlights(); return x; }, function (e) { delete flightBusy[fi]; updateFlights(); throw e; });
+    return flightBusy[fi];
+  }
+
+  function flightLinks(f) {
+    var c = String(f.code || '').replace(/\s+/g, '');
+    return el('div', { class: 'actions' }, [
+      el('a', { class: 'pill press', href: 'https://www.flightradar24.com/data/flights/' + c.toLowerCase(), target: '_blank', rel: 'noopener' }, [icon('plane'), el('span', { text: 'Flightradar24' })]),
+      el('a', { class: 'pill press', href: 'https://www.flightaware.com/live/flight/' + c, target: '_blank', rel: 'noopener' }, [icon('link'), el('span', { text: 'FlightAware' })])
+    ]);
+  }
+
+  function flightLiveBox(f, fi) {
+    var box = el('div', { class: 'pass-live', dataset: { fi: fi } }, [
+      el('div', { class: 'pl-head' }, [el('span', { class: 'pl-state' }), el('b', { class: 'pl-big' })]),
+      el('div', { class: 'pl-track', 'aria-hidden': 'true' }, [
+        el('span', { class: 'pl-fill' }),
+        el('span', { class: 'pl-ride' }, [el('span', { class: 'pl-plane' }, [icon('plane')])])
+      ]),
+      el('div', { class: 'pl-live' }),
+      flightLinks(f)
+    ]);
+    return box;
+  }
+
+  function dur(ms) {
+    var m = Math.max(0, Math.round(ms / 6e4));
+    var d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mm = m % 60;
+    if (d >= 2) return d + ' 日 ' + h + ' 小時';
+    if (d === 1) return '1 日 ' + h + ' 小時';
+    return (h ? h + ' 小時 ' : '') + mm + ' 分';
+  }
+
+  function updateFlights() {
+    var t = state.trip;
+    if (!t || !t.flights) return;
+    var n = nowMs();
+    document.querySelectorAll('.pass-live').forEach(function (box) {
+      var fi = +box.dataset.fi;
+      var f = t.flights[fi];
+      if (!f) return;
+      var ft = flightTimes(f, fi);
+      var rec = flightLive[fi];
+      var live = rec && rec.data;
+      var dep = (live && live.dep.best && live.dep.best.ms) || (live && live.dep.sched && live.dep.sched.ms) || ft.dep;
+      var arr = (live && live.arr.best && live.arr.best.ms) || (live && live.arr.sched && live.arr.sched.ms) || ft.arr;
+      var st = live && live.status;
+      var cancelled = /^Cancel|^Canceled/.test(st || '');
+      var p, label, big;
+      if (cancelled) { p = 0; label = '航班狀態'; big = '已取消'; }
+      else if (n < dep) { p = 0; label = '距離起飛'; big = dur(dep - n); }
+      else if (n < arr && !/Arrived|Landed/.test(st || '')) {
+        p = Math.min(1, (n - dep) / (arr - dep));
+        label = '飛行中 · 約 ' + Math.round(p * 100) + '%';
+        big = '仲有 ' + dur(arr - n);
+      } else { p = 1; label = '航班'; big = '已到達'; }
+      box.dataset.phase = cancelled ? 'cancel' : p >= 1 ? 'done' : p > 0 ? 'air' : 'ground';
+      box.querySelector('.pl-state').textContent = label;
+      box.querySelector('.pl-big').textContent = big;
+      box.querySelector('.pl-fill').style.transform = 'scaleX(' + p + ')';
+      box.querySelector('.pl-ride').style.transform = 'translateX(' + (p * 100) + '%)';
+
+      var lv = box.querySelector('.pl-live');
+      lv.textContent = '';
+      if (!lsGet(ADB_LS)) {
+        lv.appendChild(el('span', { class: 'pl-note', text: '按時刻表推算。想睇真實延誤同閘口，可以喺「設定」加入航班數據 key。' }));
+        return;
+      }
+      if (rec && rec.err) lv.appendChild(el('span', { class: 'pl-note warn', text: rec.err }));
+      if (rec && rec.empty) lv.appendChild(el('span', { class: 'pl-note', text: '暫時未有呢班機嘅即時數據（通常出發前一兩日先有）' }));
+      if (!rec) lv.appendChild(el('span', { class: 'pl-note', text: n < ft.dep - 48 * 36e5 ? '起飛前 48 小時內會自動更新真實數據' : '更新緊…' }));
+      if (live) {
+        var depDelay = live.dep.sched && live.dep.best ? Math.round((live.dep.best.ms - live.dep.sched.ms) / 6e4) : 0;
+        var stTxt = FL_STATUS[st] || st;
+        var late = depDelay >= 15 || st === 'Delayed';
+        var grid = el('div', { class: 'pl-grid' }, [
+          el('span', { class: 'pl-status ' + (cancelled ? 'bad' : late ? 'late' : 'ok'), text: stTxt + (depDelay >= 5 ? ' · 遲 ' + depDelay + ' 分' : '') }),
+          plCell('起飛', (live.dep.best || live.dep.sched || {}).hm, live.dep.sched && live.dep.best && live.dep.best.hm !== live.dep.sched.hm ? '原定 ' + live.dep.sched.hm : ''),
+          plCell('到達', (live.arr.best || live.arr.sched || {}).hm, live.arr.sched && live.arr.best && live.arr.best.hm !== live.arr.sched.hm ? '原定 ' + live.arr.sched.hm : ''),
+          live.dep.terminal || live.dep.gate ? plCell('出發', [live.dep.terminal ? 'T' + live.dep.terminal : '', live.dep.gate ? '閘口 ' + live.dep.gate : ''].filter(Boolean).join(' · '), live.dep.desk ? '櫃檯 ' + live.dep.desk : '') : null,
+          live.arr.terminal || live.arr.belt ? plCell('抵達', [live.arr.terminal ? 'T' + live.arr.terminal : '', live.arr.belt ? '行李帶 ' + live.arr.belt : ''].filter(Boolean).join(' · ')) : null
+        ]);
+        lv.appendChild(grid);
+      }
+      var stamp = rec && rec.t ? new Date(rec.t) : null;
+      lv.appendChild(el('div', { class: 'pl-foot' }, [
+        el('span', { text: stamp ? '更新於 ' + pad2(stamp.getHours()) + ':' + pad2(stamp.getMinutes()) : '' }),
+        el('button', { type: 'button', class: 'pl-refresh press', onclick: function () {
+          var b = this; b.classList.add('spin');
+          fetchFlight(f, fi, true).then(function () { toast('已更新 ' + f.code, 1800, 'check'); }, function (e) { toast(e.message, 3500, 'alert'); })
+            .then(function () { b.classList.remove('spin'); });
+        } }, [icon('sync'), '更新'])
+      ]));
+    });
+  }
+  function plCell(k, v, sub) {
+    if (!v) return null;
+    return el('span', { class: 'pl-cell' }, [el('small', { text: k }), el('b', { text: v }), sub ? el('em', { text: sub }) : null]);
+  }
+  function refreshFlights() {
+    var t = state.trip;
+    if (!t || !t.flights) return;
+    t.flights.forEach(function (f, fi) { fetchFlight(f, fi, false).catch(function () {}); });
+    updateFlights();
+  }
+  setInterval(function () { if (!document.hidden) refreshFlights(); }, 30000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) refreshFlights(); });
+
+  function renderFlightKeyCard() {
+    var has = !!lsGet(ADB_LS);
+    var input = el('input', { type: 'password', placeholder: 'X-RapidAPI-Key', value: lsGet(ADB_LS) || '', autocomplete: 'off', spellcheck: 'false' });
+    return el('div', { class: 'card rise', style: '--i:2' }, [
+      el('div', { class: 'card-title' }, [icon('plane'), has ? '已連接航班數據' : '航班即時數據（選用）']),
+      el('p', { text: '加入 AeroDataBox 免費 key 之後，機票卡會顯示真實狀態、延誤、閘口同行李帶；起飛前 48 小時至降落後自動每 10 分鐘更新。冇 key 都會按時刻表顯示倒數同飛行進度。' }),
+      el('ol', { class: 'steps compact' }, [
+        el('li', null, ['打開 ', el('a', { href: 'https://rapidapi.com/aedbx-aedbx/api/aerodatabox/pricing', target: '_blank', rel: 'noopener', text: 'RapidAPI · AeroDataBox' }), '，註冊／登入']),
+        el('li', { text: '揀免費嗰個 Basic 方案 → Subscribe' }),
+        el('li', { text: '去 Endpoints 頁，複製右邊 X-RapidAPI-Key，貼落下面' })
+      ]),
+      el('label', { class: 'fld' }, ['API Key', input]),
+      el('div', { class: 'actions' }, [
+        el('button', { type: 'button', class: 'solid press', text: '儲存並測試', onclick: function () {
+          var k = input.value.replace(/[^\x21-\x7e]/g, '');
+          input.value = k;
+          if (!k) { lsSet(ADB_LS, null); toast('已移除航班數據 key', 2200); render(); return; }
+          lsSet(ADB_LS, k);
+          toast('測試緊…', 8000, 'sync');
+          var f = state.trip.flights && state.trip.flights[0];
+          if (!f) return;
+          fetchFlight(f, 0, true).then(function (rec) {
+            toast(rec && rec.data ? '連接成功：' + f.code + ' ' + (FL_STATUS[rec.data.status] || rec.data.status) : '連接成功（暫時未有 ' + f.code + ' 數據，接近出發日會有）', 4000, 'check');
+            render();
+          }, function (e) { toast('測試失敗：' + e.message, 5000, 'alert'); });
+        } }),
+        has ? el('button', { type: 'button', class: 'ghost press', text: '移除', onclick: function () { lsSet(ADB_LS, null); toast('已移除', 1800); render(); } }) : null
+      ]),
+      el('p', { class: 'fine', text: 'Key 只會儲存喺呢部裝置。免費方案每月次數有限，所以只會喺航班前後先自動更新。' })
     ]);
   }
 
