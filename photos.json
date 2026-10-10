@@ -1,0 +1,5 @@
+---
+layout: null
+---
+{%- assign files = site.static_files | where_exp: "f", "f.path contains '/photos/'" -%}
+[{% for f in files %}{% unless forloop.first %},{% endunless %}{{ f.path | remove_first: "/" | jsonify }}{% endfor %}]

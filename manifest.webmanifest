@@ -1,0 +1,12 @@
+{
+  "name": "旅のしおり · 京都・大阪 7日6夜",
+  "short_name": "旅のしおり",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F3EEE5",
+  "theme_color": "#F3EEE5",
+  "icons": [
+    { "src": "assets/icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
